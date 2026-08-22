@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';"></script>
 <style>
   :root{
     --void:#080B14;
@@ -125,6 +125,16 @@
   nav button.navlink:hover{color:var(--text);}
   nav button.navlink.active{color:var(--guardian); border-color:var(--guardian-soft); background:var(--guardian-soft);}
 
+  .meta-bar{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+    padding:9px clamp(20px,5vw,56px); border-bottom:1px solid var(--hairline);
+    background:rgba(255,255,255,0.015); font-size:12.5px;
+  }
+  .meta-greeting{color:var(--text); font-weight:500;}
+  .meta-right{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
+  .meta-item{display:inline-flex; align-items:center; gap:6px; color:var(--muted);}
+  .meta-item svg{width:13px; height:13px; opacity:.7; flex:none;}
+
   .account-chip{
     display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted);
     border-left:1px solid var(--hairline); padding-left:14px; margin-left:6px;
@@ -161,17 +171,22 @@
     position:relative;
     border:1px solid var(--hairline);
     border-radius:20px;
-    background:linear-gradient(180deg, rgba(255,255,255,0.015), transparent 40%), var(--panel);
+    background:
+      radial-gradient(ellipse 60% 50% at 18% 15%, rgba(140,141,245,0.10), transparent 60%),
+      radial-gradient(ellipse 55% 50% at 85% 20%, rgba(52,199,123,0.08), transparent 60%),
+      radial-gradient(ellipse 60% 55% at 50% 90%, rgba(240,180,41,0.06), transparent 60%),
+      linear-gradient(180deg, rgba(255,255,255,0.015), transparent 40%), var(--panel);
     overflow:hidden;
   }
   .constellation-wrap svg{display:block; width:100%; height:auto;}
-  .edge{stroke:var(--hairline); stroke-width:1.4; fill:none;}
-  .edge.lit{stroke:rgba(52,199,123,0.35);}
+  .edge{stroke:var(--hairline); stroke-width:1; fill:none; opacity:.4; filter:url(#edgeBlur);}
+  .edge.lit{stroke:rgba(52,199,123,0.5); opacity:.9;}
 
   .star-btn{cursor:pointer;}
+  .star-haze{filter:url(#starBlur); transition:opacity .5s ease;}
   .star-core{transition:opacity .35s ease, filter .35s ease;}
   .star-ring{fill:none; transition:opacity .35s ease, stroke .35s ease;}
-  .star-icon{transform-box:fill-box; transform-origin:center;}
+  .star-icon{transform-box:fill-box; transform-origin:center; animation:twinkleIcon 4s ease-in-out infinite;}
   .star-label{
     font-family:'Inter',sans-serif; font-size:12.5px; font-weight:500; fill:var(--muted);
     pointer-events:none; transition:fill .3s ease;
@@ -179,9 +194,13 @@
   .star-btn.done .star-label{fill:var(--text);}
   .star-btn.done .star-core{filter:drop-shadow(0 0 8px rgba(52,199,123,0.55));}
   .star-btn.streak-hot .star-core{filter:drop-shadow(0 0 12px rgba(240,180,41,0.75));}
-  .star-btn.dim .star-icon{opacity:0.38;}
+  .star-btn.dim .star-icon{opacity:0.4;}
 
-  /* per-habit idle animations — only active while .done */
+  /* ambient twinkle — always running, staggered per star via inline animation-delay/duration */
+  @keyframes twinkleIcon{0%,100%{opacity:0.28;}50%{opacity:0.62;}}
+  .star-btn.done .star-icon{opacity:1;}
+
+  /* per-habit idle animations — only active while .done, override the base twinkle */
   @keyframes iconPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.14);}}
   @keyframes iconSway{0%,100%{transform:rotate(-6deg);}50%{transform:rotate(6deg);}}
   @keyframes iconBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
@@ -315,20 +334,6 @@
 
   .empty-note{color:var(--muted-2); font-size:13px; padding:6px 2px 0;}
 
-  /* ---------- per-habit reminders ---------- */
-  .reminder-row{
-    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
-    padding:12px 4px; border-bottom:1px solid var(--hairline);
-  }
-  .reminder-row:last-child{border-bottom:none;}
-  .reminder-name{display:flex; align-items:center; gap:10px; font-size:13.5px; font-weight:500; min-width:140px;}
-  .reminder-controls{display:flex; align-items:center; gap:10px;}
-  .reminder-controls input[type=time]{
-    background:var(--void); border:1px solid var(--hairline); border-radius:8px; color:var(--text);
-    font-family:'JetBrains Mono',monospace; font-size:12.5px; padding:7px 9px;
-  }
-  .reminder-controls input[type=time]:disabled{opacity:.4;}
-
   /* ---------- export ---------- */
   .export-group{display:flex; gap:8px; flex-wrap:wrap;}
   .export-group .btn{display:inline-flex; align-items:center; gap:7px;}
@@ -367,6 +372,19 @@
     background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
     padding:6px 16px; margin-bottom:28px;
   }
+  .reminder-row{
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    padding:12px 4px; border-bottom:1px solid var(--hairline);
+  }
+  .reminder-row:last-child{border-bottom:none;}
+  .reminder-row .rr-name{display:flex; align-items:center; gap:9px; font-size:13.5px; min-width:150px;}
+  .reminder-row .rr-controls{display:flex; align-items:center; gap:12px;}
+  .reminder-row input[type=time]{
+    background:var(--void); border:1px solid var(--hairline); border-radius:8px; color:var(--text);
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; padding:6px 8px;
+  }
+  .reminder-row input[type=time]:disabled{opacity:.4;}
+  .reminder-row .rr-note{font-size:11.5px; color:var(--muted-2); min-width:100%; order:3;}
 
   /* ---------- device connections ---------- */
   .device-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-bottom:10px;}
@@ -527,7 +545,7 @@
     <!-- step 1: welcome -->
     <div class="auth-step" data-step="welcome">
       <div class="welcome-mark"><div class="ring"></div><img src="logo.svg" alt=""></div>
-      <h2 class="centered">Nine stars. One sky.</h2>
+      <h2 class="centered">Your sky. Your stars.</h2>
       <p class="sub-copy centered">Sleep and stillness anchor the centre — the cold water, the walking, the sunlight, orbit around them. Sign in to carry your sky across devices, or keep it on this one.</p>
       <button class="auth-submit" id="welcomeContinueBtn">Continue →</button>
       <button class="auth-skip" id="authSkipBtnWelcome">Continue without an account — this device only</button>
@@ -538,7 +556,10 @@
       <button class="step-back" id="authBackBtn">← Back</button>
       <div class="brand"><img src="logo.svg" alt="" style="width:26px;height:26px;vertical-align:middle;margin-right:8px;"><span class="brand-name" style="vertical-align:middle;">Guardian Nebula</span></div>
       <div id="authConfigWarning" class="auth-config-warning" style="display:none;">
-        Cloud sync isn't configured yet — add your Supabase project URL and anon key in <span class="mono">index.html</span> to enable login and cross-device sync. Until then, everything works on this device only.
+        Cloud sync isn't configured yet — add your Supabase project URL and anon/publishable key in <span class="mono">index.html</span> to enable login and cross-device sync. Until then, everything works on this device only.
+      </div>
+      <div id="authSdkWarning" class="auth-config-warning" style="display:none;">
+        Your Supabase keys look set, but the client library didn't load — check your internet connection, ad-blocker, or firewall, then reload this page. Everything works on this device only until it does.
       </div>
       <h2 id="authTitle">Welcome back</h2>
       <p class="sub-copy" id="authSub">Sign in to sync your constellation across devices.</p>
@@ -578,15 +599,31 @@
   </nav>
 </header>
 
+<div class="meta-bar">
+  <div class="meta-greeting" id="metaGreeting">This device only</div>
+  <div class="meta-right">
+    <span class="meta-item" id="metaLocation" title="Based on your device's language/region setting">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span id="metaLocationText">—</span>
+    </span>
+    <span class="meta-item mono" id="metaDate">—</span>
+    <span class="meta-item mono" id="metaClock">--:--</span>
+  </div>
+</div>
+
 <section class="hero" id="sky">
   <div class="hero-copy">
     <p class="eyebrow">Guardian Nebula</p>
-    <h1>Nine stars. One sky you keep lit.</h1>
-    <p>Sleep and stillness anchor the centre — everything else, the cold water, the walking, the sunlight, orbits around them. Tap a star to log it. A lit sky is a day you showed up for yourself.</p>
+    <h1>Your sky, yours to fill.</h1>
+    <p>Sleep and stillness anchor the centre — everything else, built in or your own, drifts around them like gas around a core. Tap a star to log it. A lit sky is a day you showed up for yourself.</p>
   </div>
 
   <div class="constellation-wrap">
-    <svg id="constellationSvg" viewBox="0 0 800 460" xmlns="http://www.w3.org/2000/svg" aria-label="Habit constellation — tap a star to log today's practice">
+    <svg id="constellationSvg" viewBox="0 0 800 460" xmlns="http://www.w3.org/2000/svg" aria-label="Habit nebula — tap a star to log today's practice">
+      <defs>
+        <filter id="starBlur" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="9"/></filter>
+        <filter id="edgeBlur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1"/></filter>
+      </defs>
       <defs id="iconDefs"></defs>
       <g id="edgesLayer"></g>
       <g id="starsLayer"></g>
@@ -888,6 +925,14 @@
     return id;
   }
 
+  function hashJitter(id, spread){
+    var h = 0;
+    for(var i=0;i<id.length;i++){ h = ((h<<5)-h+id.charCodeAt(i))|0; }
+    var a = ((h % 1000)/1000);
+    var b = (((h>>3) % 1000)/1000);
+    return { dx:(a-0.5)*2*spread, dy:(b-0.5)*2*spread };
+  }
+
   function computeLayout(list){
     var anchors = list.filter(function(h){return h.anchor;});
     var orbit = list.filter(function(h){return !h.anchor;});
@@ -895,14 +940,18 @@
 
     var aSpacing = 90;
     var aStartY = cy - ((anchors.length-1)*aSpacing)/2;
-    anchors.forEach(function(h,i){ h.x = cx; h.y = aStartY + i*aSpacing; });
+    anchors.forEach(function(h,i){
+      var j = hashJitter(h.id, 6);
+      h.x = cx + j.dx; h.y = aStartY + i*aSpacing + j.dy;
+    });
 
     var n = Math.max(orbit.length,1);
     var radius = Math.min(150 + Math.max(0, orbit.length-8)*6, 210);
     orbit.forEach(function(h,i){
       var angle = (2*Math.PI*i/n) - Math.PI/2;
-      h.x = cx + radius*Math.cos(angle);
-      h.y = cy + radius*Math.sin(angle)*0.82;
+      var j = hashJitter(h.id, 16);
+      h.x = cx + radius*Math.cos(angle) + j.dx;
+      h.y = cy + radius*Math.sin(angle)*0.82 + j.dy;
     });
   }
 
@@ -911,7 +960,14 @@
     var orbit = list.filter(function(h){return !h.anchor;});
     var edges = [];
     orbit.forEach(function(h){
-      anchors.forEach(function(a){ edges.push([h.id, a.id]); });
+      // nearest anchor only — a soft single tether instead of a line to every anchor,
+      // so the sky reads as a drifting cluster rather than a rigid asterisk.
+      var nearest = anchors[0], best = Infinity;
+      anchors.forEach(function(a){
+        var d = Math.hypot(a.x-h.x, a.y-h.y);
+        if(d < best){ best = d; nearest = a; }
+      });
+      if(nearest) edges.push([h.id, nearest.id]);
     });
     for(var i=0;i<anchors.length-1;i++) edges.push([anchors[i].id, anchors[i+1].id]);
     return edges;
@@ -1260,11 +1316,63 @@
     document.getElementById('storageModeNote').textContent = currentUser
       ? 'Guardian Nebula — synced to your account.'
       : 'Guardian Nebula — data stays on this device.';
+    updateMetaGreeting();
+  }
+
+  /* ---------------- meta bar: greeting, date, clock, location ---------------- */
+  function updateMetaGreeting(){
+    var g = document.getElementById('metaGreeting');
+    if(!g) return;
+    if(currentUser && currentUser.email){
+      g.textContent = 'Hi, ' + currentUser.email.split('@')[0];
+    } else {
+      g.textContent = 'This device only';
+    }
+  }
+
+  function deviceLocationLabel(){
+    try{
+      var locale = navigator.language || 'en-US';
+      var parts = locale.split('-');
+      var region = parts.length > 1 ? parts[parts.length-1] : null;
+      if(region && /^[A-Za-z]{2}$/.test(region) && window.Intl && Intl.DisplayNames){
+        var dn = new Intl.DisplayNames([locale], { type:'region' });
+        var name = dn.of(region.toUpperCase());
+        if(name) return name;
+      }
+    }catch(e){}
+    try{
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if(tz) return tz.split('/').pop().replace(/_/g,' ');
+    }catch(e){}
+    return '';
+  }
+
+  function updateMetaLocation(){
+    var wrap = document.getElementById('metaLocation');
+    var txt = document.getElementById('metaLocationText');
+    if(!wrap || !txt) return;
+    var loc = deviceLocationLabel();
+    if(loc){ txt.textContent = loc; wrap.style.display = ''; }
+    else { wrap.style.display = 'none'; }
+  }
+
+  function updateMetaClock(){
+    var now = new Date();
+    var dateEl = document.getElementById('metaDate');
+    var clockEl = document.getElementById('metaClock');
+    if(dateEl) dateEl.textContent = now.toLocaleDateString(undefined,{ weekday:'short', month:'short', day:'numeric' });
+    if(clockEl) clockEl.textContent = now.toLocaleTimeString(undefined,{ hour:'2-digit', minute:'2-digit' });
   }
 
   function initAuth(){
     if(!sb){
-      document.getElementById('authConfigWarning').style.display = 'block';
+      if(CLOUD_CONFIGURED){
+        // keys are filled in, but window.supabase never showed up — the CDN script(s) failed.
+        document.getElementById('authSdkWarning').style.display = 'block';
+      } else {
+        document.getElementById('authConfigWarning').style.display = 'block';
+      }
       renderAccountChip();
       showAuthOverlay();
       return Promise.resolve(false);
@@ -1309,7 +1417,7 @@
       edgesLayer.appendChild(line);
     });
 
-    HABITS.forEach(function(h){
+    HABITS.forEach(function(h, i){
       var e = entry(t,h.id);
       var streak = streakFor(h.id);
       var color = CATEGORIES[h.cat].color;
@@ -1320,6 +1428,15 @@
       g.setAttribute('role','button');
       g.setAttribute('aria-label', h.name + (e.done?', logged today':', not logged today'));
       g.dataset.habit = h.id;
+
+      // soft nebula haze behind the star — always present, brighter once lit
+      var haze = document.createElementNS(svgNS,'circle');
+      haze.setAttribute('cx',h.x); haze.setAttribute('cy',h.y);
+      haze.setAttribute('r', h.r + (h.anchor ? 30 : 24));
+      haze.setAttribute('fill', color);
+      haze.setAttribute('opacity', e.done ? '0.16' : '0.055');
+      haze.setAttribute('class','star-haze');
+      g.appendChild(haze);
 
       if(streak>=7){
         var ring = document.createElementNS(svgNS,'circle');
@@ -1346,7 +1463,10 @@
       use.setAttribute('x', h.x-h.r); use.setAttribute('y', h.y-h.r);
       use.setAttribute('width', h.r*2); use.setAttribute('height', h.r*2);
       use.setAttribute('class','star-icon icon-'+h.icon);
-      use.setAttribute('style','color:'+(e.done?color:'#5E6786'));
+      // stagger the ambient blink so stars twinkle out of sync with each other
+      var twDelay = (i % 7) * 0.55;
+      var twDur = 3.2 + (i % 5) * 0.5;
+      use.setAttribute('style','color:'+(e.done?color:'#5E6786')+';animation-delay:'+twDelay+'s;animation-duration:'+twDur+'s;');
       g.appendChild(use);
 
       var label = document.createElementNS(svgNS,'text');
@@ -1534,6 +1654,7 @@
     renderView();
     populateEntrySelect();
     renderManageList();
+    renderHabitReminders();
   });
 
   function renderManageList(){
@@ -1552,6 +1673,7 @@
             renderView();
             populateEntrySelect();
             renderManageList();
+            renderHabitReminders();
           }
         });
         row.appendChild(rmBtn);
@@ -1995,20 +2117,114 @@
     refreshReminderStatus();
   });
 
+  /* ---------------- per-practice reminders ---------------- */
+  var HABIT_NOTIFIED_KEY = 'guardian-nebula-notified-habits-v1';
+
+  function saveHabitReminders(){
+    saveLocalHabitReminders(HABIT_REMINDERS);
+    saveProfile({ habit_reminders: HABIT_REMINDERS });
+  }
+
+  function renderHabitReminders(){
+    var wrap = document.getElementById('habitReminderList');
+    if(!wrap) return;
+    wrap.innerHTML = '';
+    HABITS.forEach(function(h){
+      var setting = HABIT_REMINDERS[h.id] || { enabled:false, time:'20:00' };
+      var row = el('div','reminder-row');
+
+      var nameEl = el('div','rr-name','<span class="dot" style="background:'+CATEGORIES[h.cat].color+'"></span>'+h.name);
+      row.appendChild(nameEl);
+
+      var controls = el('div','rr-controls');
+
+      var toggleBtn = el('button','toggle'+(setting.enabled?' on':''));
+      toggleBtn.type = 'button';
+      toggleBtn.setAttribute('aria-label','Toggle reminder for '+h.name);
+      controls.appendChild(toggleBtn);
+
+      var timeInput = document.createElement('input');
+      timeInput.type = 'time';
+      timeInput.value = setting.time || '20:00';
+      timeInput.disabled = !setting.enabled;
+      controls.appendChild(timeInput);
+
+      row.appendChild(controls);
+      wrap.appendChild(row);
+
+      toggleBtn.addEventListener('click', function(){
+        setting = Object.assign({}, setting, { enabled: !setting.enabled });
+        HABIT_REMINDERS[h.id] = setting;
+        toggleBtn.classList.toggle('on', setting.enabled);
+        timeInput.disabled = !setting.enabled;
+        saveHabitReminders();
+      });
+      timeInput.addEventListener('change', function(){
+        setting = Object.assign({}, setting, { time: timeInput.value || '20:00' });
+        HABIT_REMINDERS[h.id] = setting;
+        saveHabitReminders();
+      });
+    });
+  }
+
+  var remindersAllOnBtn = document.getElementById('remindersAllOnBtn');
+  var remindersAllOffBtn = document.getElementById('remindersAllOffBtn');
+  if(remindersAllOnBtn) remindersAllOnBtn.addEventListener('click', function(){
+    if(!('Notification' in window)) return;
+    Notification.requestPermission().then(function(perm){
+      HABITS.forEach(function(h){
+        var setting = HABIT_REMINDERS[h.id] || { time:'20:00' };
+        HABIT_REMINDERS[h.id] = Object.assign({}, setting, { enabled: perm==='granted' });
+      });
+      saveHabitReminders();
+      renderHabitReminders();
+    });
+  });
+  if(remindersAllOffBtn) remindersAllOffBtn.addEventListener('click', function(){
+    HABITS.forEach(function(h){
+      var setting = HABIT_REMINDERS[h.id] || { time:'20:00' };
+      HABIT_REMINDERS[h.id] = Object.assign({}, setting, { enabled:false });
+    });
+    saveHabitReminders();
+    renderHabitReminders();
+  });
+
   function checkReminderTick(){
-    if(!PROFILE.reminders_enabled || !('Notification' in window) || Notification.permission!=='granted') return;
+    if(!('Notification' in window) || Notification.permission!=='granted') return;
     var now = new Date();
     var hh = pad(now.getHours()), mm = pad(now.getMinutes());
-    var target = (PROFILE.reminder_time||'20:00');
+    var nowStr = hh+':'+mm;
     var t = today();
-    var alreadyNotified = window.localStorage.getItem(REMINDER_NOTIFIED_KEY) === t;
-    if(hh+':'+mm >= target && !alreadyNotified){
-      var doneCount = HABITS.reduce(function(n,h){ return n + (entry(t,h.id).done?1:0); },0);
-      if(doneCount < HABITS.length){
-        new Notification('Guardian Nebula', { body: doneCount+'/'+HABITS.length+' lit today \u2014 still time to light a few more.' });
+
+    // master "sky" reminder
+    if(PROFILE.reminders_enabled){
+      var target = (PROFILE.reminder_time||'20:00');
+      var alreadyNotified = window.localStorage.getItem(REMINDER_NOTIFIED_KEY) === t;
+      if(nowStr >= target && !alreadyNotified){
+        var doneCount = HABITS.reduce(function(n,h){ return n + (entry(t,h.id).done?1:0); },0);
+        if(doneCount < HABITS.length){
+          new Notification('Guardian Nebula', { body: doneCount+'/'+HABITS.length+' lit today \u2014 still time to light a few more.' });
+        }
+        window.localStorage.setItem(REMINDER_NOTIFIED_KEY, t);
       }
-      window.localStorage.setItem(REMINDER_NOTIFIED_KEY, t);
     }
+
+    // per-practice reminders
+    var notifiedRaw = null;
+    try{ notifiedRaw = JSON.parse(window.localStorage.getItem(HABIT_NOTIFIED_KEY)||'null'); }catch(e){}
+    if(!notifiedRaw || notifiedRaw.date !== t){ notifiedRaw = { date:t, ids:[] }; }
+
+    HABITS.forEach(function(h){
+      var setting = HABIT_REMINDERS[h.id];
+      if(!setting || !setting.enabled) return;
+      var target = setting.time || '20:00';
+      if(nowStr < target) return;
+      if(notifiedRaw.ids.indexOf(h.id) !== -1) return;
+      if(entry(t,h.id).done) return;
+      new Notification('Guardian Nebula', { body: h.name+' isn\u2019t lit yet today \u2014 still time.' });
+      notifiedRaw.ids.push(h.id);
+    });
+    window.localStorage.setItem(HABIT_NOTIFIED_KEY, JSON.stringify(notifiedRaw));
   }
 
   /* ---------------- PWA install ---------------- */
@@ -2087,6 +2303,10 @@
     renderAccountChip();
     if(PROFILE.reminder_time) reminderTimeInput.value = PROFILE.reminder_time;
     refreshReminderStatus();
+    renderHabitReminders();
+    updateMetaLocation();
+    updateMetaClock();
+    setInterval(updateMetaClock, 30000);
     setInterval(checkReminderTick, 60000);
     registerPWA();
   }
