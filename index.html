@@ -206,7 +206,12 @@
     display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;
     padding:18px 22px; border-top:1px solid var(--hairline);
   }
-  .today-score{display:flex; align-items:baseline; gap:8px;}
+  .today-score{display:flex; align-items:center; gap:14px;}
+  .ring-wrap{position:relative; width:52px; height:52px; flex:none;}
+  .ring-wrap svg{transform:rotate(-90deg);}
+  .ring-track{fill:none; stroke:var(--hairline); stroke-width:5;}
+  .ring-fill{fill:none; stroke:var(--guardian); stroke-width:5; stroke-linecap:round; transition:stroke-dasharray .5s ease;}
+  .today-score-text{display:flex; align-items:baseline; gap:8px;}
   .today-score .num{font-size:30px; font-weight:600; font-family:'Space Grotesk',sans-serif;}
   .today-score .lbl{color:var(--muted); font-size:13px;}
   .today-date{color:var(--muted-2); font-size:13px;}
@@ -264,19 +269,27 @@
 
   .stat-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:28px;}
   .stat-card{
-    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius); padding:16px 18px;
+    position:relative; background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    padding:18px 18px 16px; overflow:hidden; transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
   }
-  .stat-card .k{font-size:24px; font-weight:600; font-family:'Space Grotesk',sans-serif;}
-  .stat-card .l{color:var(--muted); font-size:12.5px; margin-top:2px;}
+  .stat-card::before{
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background:linear-gradient(90deg, var(--card-accent, var(--guardian)), transparent);
+  }
+  .stat-card:hover{transform:translateY(-2px); box-shadow:0 10px 26px rgba(0,0,0,0.35); border-color:var(--muted-2);}
+  .stat-card .k{font-size:26px; font-weight:700; font-family:'Space Grotesk',sans-serif; letter-spacing:-0.01em;}
+  .stat-card .l{color:var(--muted); font-size:12.5px; margin-top:3px;}
 
   .panel-title{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;}
   .panel-title h3{margin:0; font-size:16px; font-weight:600;}
   .panel-title .n{color:var(--muted-2); font-size:12.5px;}
 
   .habit-block{
-    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
-    padding:18px 20px; margin-bottom:12px;
+    background:var(--panel); border:1px solid var(--hairline); border-left:3px solid var(--accent, var(--hairline));
+    border-radius:var(--radius); padding:18px 20px; margin-bottom:12px;
+    transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
   }
+  .habit-block:hover{transform:translateY(-1px); box-shadow:0 8px 22px rgba(0,0,0,0.3);}
   .habit-block-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:12px; flex-wrap:wrap;}
   .habit-name{display:flex; align-items:center; gap:10px; font-weight:600; font-size:14.5px;}
   .dot{width:9px; height:9px; border-radius:50%; flex:none;}
@@ -301,6 +314,11 @@
   }
 
   .empty-note{color:var(--muted-2); font-size:13px; padding:6px 2px 0;}
+
+  /* ---------- export ---------- */
+  .export-group{display:flex; gap:8px; flex-wrap:wrap;}
+  .export-group .btn{display:inline-flex; align-items:center; gap:7px;}
+  .export-group .btn svg{width:14px; height:14px;}
 
   /* ---------- manual entry form ---------- */
   .entry-form{
@@ -341,7 +359,9 @@
   .device-card{
     background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
     padding:18px; display:flex; flex-direction:column; gap:10px;
+    transition:transform .2s ease, box-shadow .2s ease;
   }
+  .device-card:hover{transform:translateY(-2px); box-shadow:0 10px 26px rgba(0,0,0,0.32);}
   .device-card .dev-head{display:flex; align-items:center; gap:10px;}
   .device-card .dev-icon{width:30px; height:30px; flex:none; color:var(--nebula);}
   .device-card .dev-name{font-weight:600; font-size:14.5px;}
@@ -560,8 +580,16 @@
 
     <div class="today-strip">
       <div class="today-score">
-        <span class="num mono" id="todayScore">0/9</span>
-        <span class="lbl">lit today</span>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 52 52" width="52" height="52">
+            <circle class="ring-track" cx="26" cy="26" r="21"></circle>
+            <circle class="ring-fill" id="ringFill" cx="26" cy="26" r="21" stroke-dasharray="0 999"></circle>
+          </svg>
+        </div>
+        <div class="today-score-text">
+          <span class="num mono" id="todayScore">0/9</span>
+          <span class="lbl">lit today</span>
+        </div>
       </div>
       <div class="today-date" id="todayDate"></div>
       <div class="hint">Tap any star to log it</div>
@@ -589,6 +617,16 @@
     <div>
       <h2>Dashboard</h2>
       <p>Log manually for any date, or review your history across timeframes.</p>
+    </div>
+    <div class="export-group">
+      <button type="button" class="btn ghost" id="exportJsonBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export JSON
+      </button>
+      <button type="button" class="btn ghost" id="exportCsvBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
     </div>
   </div>
 
@@ -1188,6 +1226,7 @@
     if(!sb){
       document.getElementById('authConfigWarning').style.display = 'block';
       renderAccountChip();
+      showAuthOverlay();
       return Promise.resolve(false);
     }
     return sb.auth.getSession().then(function(res){
@@ -1201,6 +1240,13 @@
         showAuthOverlay();
         return false;
       }
+    }).catch(function(err){
+      console.warn('Supabase session check failed, falling back to local mode:', err);
+      document.getElementById('authConfigWarning').style.display = 'block';
+      document.getElementById('authConfigWarning').textContent = 'Couldn\u2019t reach Supabase — check your project URL/key, or continue on this device only.';
+      renderAccountChip();
+      showAuthOverlay();
+      return false;
     });
   }
 
@@ -1287,6 +1333,13 @@
     var doneCount = HABITS.reduce(function(n,h){ return n + (entry(t,h.id).done?1:0); },0);
     document.getElementById('todayScore').textContent = doneCount+'/'+HABITS.length;
     document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric'});
+    var ring = document.getElementById('ringFill');
+    if(ring){
+      var circumference = 2*Math.PI*21;
+      var frac = HABITS.length ? (doneCount/HABITS.length) : 0;
+      ring.setAttribute('stroke-dasharray', (circumference*frac).toFixed(1)+' '+circumference.toFixed(1));
+      ring.style.stroke = frac >= 1 ? 'var(--ember)' : 'var(--guardian)';
+    }
   }
 
   /* ---------------- popover ---------------- */
@@ -1501,8 +1554,9 @@
     document.getElementById('firstLogNote').textContent = f ? ('Tracking since '+f) : '';
   }
 
-  function statCard(k,l){
+  function statCard(k,l,accent){
     var c = el('div','stat-card');
+    if(accent) c.style.setProperty('--card-accent', accent);
     c.appendChild(el('div','k mono',k));
     c.appendChild(el('div','l',l));
     return c;
@@ -1515,10 +1569,10 @@
     var doneY = HABITS.reduce(function(n,h){return n+(entry(y,h.id).done?1:0);},0);
 
     var stats = el('div','stat-row');
-    stats.appendChild(statCard(doneT+'/'+n,'lit today'));
-    stats.appendChild(statCard(doneY+'/'+n,'lit yesterday'));
+    stats.appendChild(statCard(doneT+'/'+n,'lit today','var(--guardian)'));
+    stats.appendChild(statCard(doneY+'/'+n,'lit yesterday','var(--nebula)'));
     var bestStreak = Math.max.apply(null, HABITS.map(function(h){return streakFor(h.id);}).concat([0]));
-    stats.appendChild(statCard(bestStreak+'d','longest active streak'));
+    stats.appendChild(statCard(bestStreak+'d','longest active streak','var(--ember)'));
     viewContent.appendChild(stats);
 
     viewContent.appendChild(el('div','panel-title','<h3>Today\u2019s practices</h3><span class="n">'+t+'</span>'));
@@ -1526,7 +1580,7 @@
     HABITS.forEach(function(h){
       var e = entry(t,h.id);
       var streak = streakFor(h.id);
-      var block = el('div','habit-block');
+      var block = el('div','habit-block'); block.style.setProperty('--accent', CATEGORIES[h.cat].color);
       var head = el('div','habit-block-head');
       head.appendChild(el('div','habit-name','<span class="dot" style="background:'+CATEGORIES[h.cat].color+'"></span>'+h.name));
       var meta = el('div','habit-meta',
@@ -1572,14 +1626,14 @@
     days.forEach(function(d){ HABITS.forEach(function(h){ if(entry(d,h.id).done) totalDone++; }); });
 
     var stats = el('div','stat-row');
-    stats.appendChild(statCard(Math.round(100*totalDone/totalPossible)+'%','week completion'));
-    stats.appendChild(statCard(totalDone,'practices logged'));
+    stats.appendChild(statCard(Math.round(100*totalDone/totalPossible)+'%','week completion','var(--guardian)'));
+    stats.appendChild(statCard(totalDone,'practices logged','var(--nebula)'));
     viewContent.appendChild(stats);
 
     viewContent.appendChild(el('div','panel-title','<h3>Last 7 days</h3><span class="n"></span>'));
 
     HABITS.forEach(function(h){
-      var block = el('div','habit-block');
+      var block = el('div','habit-block'); block.style.setProperty('--accent', CATEGORIES[h.cat].color);
       var doneDays = days.filter(function(d){return entry(d,h.id).done;}).length;
       var head = el('div','habit-block-head');
       head.appendChild(el('div','habit-name','<span class="dot" style="background:'+CATEGORIES[h.cat].color+'"></span>'+h.name));
@@ -1617,10 +1671,10 @@
     monthDays.forEach(function(d){ HABITS.forEach(function(h){ if(entry(d,h.id).done) totalDone++; }); });
 
     var stats = el('div','stat-row');
-    stats.appendChild(statCard(Math.round(100*totalDone/totalPossible)+'%','month completion'));
-    stats.appendChild(statCard(totalDone,'practices logged'));
+    stats.appendChild(statCard(Math.round(100*totalDone/totalPossible)+'%','month completion','var(--guardian)'));
+    stats.appendChild(statCard(totalDone,'practices logged','var(--nebula)'));
     var bestStreak = Math.max.apply(null, HABITS.map(function(h){return streakFor(h.id);}).concat([0]));
-    stats.appendChild(statCard(bestStreak+'d','current best streak'));
+    stats.appendChild(statCard(bestStreak+'d','current best streak','var(--ember)'));
     viewContent.appendChild(stats);
 
     viewContent.appendChild(el('div','panel-title','<h3>'+monthLabel(y,m)+' heatmap</h3><span class="n">by day, all habits</span>'));
@@ -1638,7 +1692,7 @@
     HABITS.forEach(function(h){
       var doneDays = monthDays.filter(function(d){return entry(d,h.id).done;}).length;
       var pct = Math.round(100*doneDays/monthDays.length);
-      var block = el('div','habit-block');
+      var block = el('div','habit-block'); block.style.setProperty('--accent', CATEGORIES[h.cat].color);
       var head = el('div','habit-block-head');
       head.appendChild(el('div','habit-name','<span class="dot" style="background:'+CATEGORIES[h.cat].color+'"></span>'+h.name));
       head.appendChild(el('div','habit-meta','<span><b>'+pct+'%</b> of days</span><span><b>'+doneDays+'</b>/'+monthDays.length+'</span>'));
@@ -1664,8 +1718,8 @@
     var yearPossible = monthTotals.reduce(function(s,x){return s+x.possible;},0);
 
     var stats = el('div','stat-row');
-    stats.appendChild(statCard(yearDone,'practices logged in '+y));
-    stats.appendChild(statCard(yearPossible? Math.round(100*yearDone/yearPossible)+'%':'0%','year completion'));
+    stats.appendChild(statCard(yearDone,'practices logged in '+y,'var(--nebula)'));
+    stats.appendChild(statCard(yearPossible? Math.round(100*yearDone/yearPossible)+'%':'0%','year completion','var(--guardian)'));
     viewContent.appendChild(stats);
 
     viewContent.appendChild(el('div','panel-title','<h3>Month by month</h3><span class="n">'+y+'</span>'));
@@ -1734,9 +1788,9 @@
       return max;
     }).concat([0]));
 
-    stats.appendChild(statCard(dayCount,'days tracked'));
-    stats.appendChild(statCard(totalDone,'practices logged, ever'));
-    stats.appendChild(statCard(bestEver+'d','longest streak ever'));
+    stats.appendChild(statCard(dayCount,'days tracked','var(--guardian)'));
+    stats.appendChild(statCard(totalDone,'practices logged, ever','var(--nebula)'));
+    stats.appendChild(statCard(bestEver+'d','longest streak ever','var(--ember)'));
     viewContent.appendChild(stats);
 
     viewContent.appendChild(el('div','panel-title','<h3>Lifetime totals by practice</h3><span class="n">since '+first+'</span>'));
@@ -1747,7 +1801,7 @@
         if(e.done) count++;
         if(e.value) sum += e.value;
       });
-      var block = el('div','habit-block');
+      var block = el('div','habit-block'); block.style.setProperty('--accent', CATEGORIES[h.cat].color);
       var head = el('div','habit-block-head');
       head.appendChild(el('div','habit-name','<span class="dot" style="background:'+CATEGORIES[h.cat].color+'"></span>'+h.name));
       var extra = h.unit ? '<span><b>'+sum+'</b> '+h.unit+' total</span>' : '';
@@ -1809,10 +1863,10 @@
 
     var statsWrap = document.getElementById('perspectiveStats');
     statsWrap.innerHTML = '';
-    statsWrap.appendChild(statCard(String(age),'years lived'));
-    statsWrap.appendChild(statCard(String(yearsLeft)+'y','remaining at this average'));
-    statsWrap.appendChild(statCard(monthsLeft.toLocaleString(),'months remaining'));
-    statsWrap.appendChild(statCard(weeksLeft.toLocaleString(),'weeks remaining'));
+    statsWrap.appendChild(statCard(String(age),'years lived','var(--nebula)'));
+    statsWrap.appendChild(statCard(String(yearsLeft)+'y','remaining at this average','var(--guardian)'));
+    statsWrap.appendChild(statCard(monthsLeft.toLocaleString(),'months remaining','var(--ember)'));
+    statsWrap.appendChild(statCard(weeksLeft.toLocaleString(),'weeks remaining','var(--nebula)'));
 
     var grid = document.getElementById('lifeGrid');
     grid.innerHTML = '';
@@ -1924,8 +1978,65 @@
     }
   }
 
+  /* ---------------- export ---------------- */
+  function downloadBlob(filename, content, mime){
+    var blob = new Blob([content], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function exportJSON(){
+    var payload = {
+      exported_at: new Date().toISOString(),
+      account: currentUser ? currentUser.email : null,
+      profile: PROFILE,
+      logs: LOGS,
+      custom_habits: customHabits,
+      notes: NOTES
+    };
+    downloadBlob('guardian-nebula-export-'+today()+'.json', JSON.stringify(payload, null, 2), 'application/json');
+  }
+
+  function exportCSV(){
+    var rows = [['date','habit_id','habit_name','category','done','value','unit']];
+    Object.keys(LOGS).sort().forEach(function(date){
+      Object.keys(LOGS[date]).forEach(function(habitId){
+        var e = LOGS[date][habitId];
+        var h = HABIT_BY_ID[habitId];
+        rows.push([
+          date,
+          habitId,
+          h ? h.name : habitId,
+          h ? CATEGORIES[h.cat].label : '',
+          e.done ? 'true' : 'false',
+          (e.value===null || e.value===undefined) ? '' : e.value,
+          (h && h.unit) ? h.unit : ''
+        ]);
+      });
+    });
+    var csv = rows.map(function(r){
+      return r.map(function(cell){
+        var s = String(cell);
+        return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+      }).join(',');
+    }).join('\n');
+    downloadBlob('guardian-nebula-logs-'+today()+'.csv', csv, 'text/csv');
+  }
+
+  document.getElementById('exportJsonBtn').addEventListener('click', exportJSON);
+  document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+
   /* ---------------- boot ---------------- */
+  var booted = false;
   function boot(){
+    if(booted) return;
+    booted = true;
     buildIconDefs();
     populateEntrySelect();
     renderManageList();
@@ -1941,9 +2052,9 @@
   }
 
   initAuth().then(function(alreadySignedIn){
-    if(alreadySignedIn) return; // boot() already called inside onSignedIn path via loadCloudData chain
-    if(!sb){ boot(); }
-    // if sb exists but not signed in, boot() runs after the user signs in or clicks "skip"
+    if(alreadySignedIn) return; // boot() already called inside the signed-in path above
+    // Otherwise the overlay is showing (configured-but-signed-out, or unconfigured/local-only) —
+    // boot() runs once the person signs in, or clicks "continue without an account".
   });
 
 })();
