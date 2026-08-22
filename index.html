@@ -315,6 +315,20 @@
 
   .empty-note{color:var(--muted-2); font-size:13px; padding:6px 2px 0;}
 
+  /* ---------- per-habit reminders ---------- */
+  .reminder-row{
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    padding:12px 4px; border-bottom:1px solid var(--hairline);
+  }
+  .reminder-row:last-child{border-bottom:none;}
+  .reminder-name{display:flex; align-items:center; gap:10px; font-size:13.5px; font-weight:500; min-width:140px;}
+  .reminder-controls{display:flex; align-items:center; gap:10px;}
+  .reminder-controls input[type=time]{
+    background:var(--void); border:1px solid var(--hairline); border-radius:8px; color:var(--text);
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; padding:7px 9px;
+  }
+  .reminder-controls input[type=time]:disabled{opacity:.4;}
+
   /* ---------- export ---------- */
   .export-group{display:flex; gap:8px; flex-wrap:wrap;}
   .export-group .btn{display:inline-flex; align-items:center; gap:7px;}
@@ -764,6 +778,18 @@
     <p class="perspective-disclaimer" id="reminderStatus">Notifications need your browser's permission and only fire while this tab is open on this device — a static page can't send background push notifications without a server behind it.</p>
     <p class="perspective-disclaimer">Want this to feel like a real app on your phone? Open this page on your phone's browser and use "Add to Home Screen" (Safari) or "Install app" (Chrome) — it's set up as an installable PWA, so it opens full-screen with its own icon, like any other app.</p>
   </div>
+
+  <div class="section-head" style="margin-top:26px; margin-bottom:12px;">
+    <div>
+      <h2 style="font-size:16px;">Reminders for each practice</h2>
+      <p>Set a separate nudge time per star — only fires if it's not logged yet that day.</p>
+    </div>
+    <div class="export-group">
+      <button type="button" class="btn ghost" id="remindersAllOnBtn">Enable all</button>
+      <button type="button" class="btn ghost" id="remindersAllOffBtn">Disable all</button>
+    </div>
+  </div>
+  <div class="manage-wrap" id="habitReminderList"></div>
 </section>
 
 <section class="page-section" id="devices">
@@ -793,7 +819,7 @@
      supabase-schema.sql against it. Until then the app runs in
      local-only mode (localStorage, no login required, no sync). */
   var SUPABASE_URL = 'https://lnsjpwfclvlyfrhfyjqe.supabase.co';
-  var SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+  var SUPABASE_ANON_KEY = 'sb_publishable_eFQpEso1PGz4YhYBM1CaWA_I_Ba3-QJ';
   var CLOUD_CONFIGURED = SUPABASE_URL.indexOf('YOUR_SUPABASE') === -1 && SUPABASE_ANON_KEY.indexOf('YOUR_SUPABASE') === -1;
   var sb = null;
   if(CLOUD_CONFIGURED && window.supabase){
@@ -1004,9 +1030,19 @@
     try{ window.localStorage.setItem(NOTES_KEY, JSON.stringify(n)); }catch(e){}
   }
 
+  var HABIT_REMINDERS_KEY = 'guardian-nebula-habit-reminders-v1';
+  function loadLocalHabitReminders(){
+    try{ var raw = window.localStorage.getItem(HABIT_REMINDERS_KEY); return raw ? JSON.parse(raw) : {}; }
+    catch(e){ return {}; }
+  }
+  function saveLocalHabitReminders(r){
+    try{ window.localStorage.setItem(HABIT_REMINDERS_KEY, JSON.stringify(r)); }catch(e){}
+  }
+
   var LOGS = loadLocalLogs();      // { 'YYYY-MM-DD': { habitId: {done, value} } }
-  var PROFILE = loadLocalProfile(); // { birth_year, life_expectancy_years, reminder_time, reminders_enabled }
+  var PROFILE = loadLocalProfile(); // { birth_year, life_expectancy_years, reminder_time, reminders_enabled, habit_reminders }
   var NOTES = loadLocalNotes();    // { 'YYYY-MM-DD': 'text' }
+  var HABIT_REMINDERS = Object.assign({}, loadLocalHabitReminders(), PROFILE.habit_reminders||{}); // { habitId: {enabled, time} }
 
   function noteFor(dateStr){ return NOTES[dateStr] || ''; }
   function setNote(dateStr, text){
@@ -1094,8 +1130,11 @@
           birth_year: profRes.data.birth_year,
           life_expectancy_years: profRes.data.life_expectancy_years,
           reminder_time: profRes.data.reminder_time,
-          reminders_enabled: profRes.data.reminders_enabled
+          reminders_enabled: profRes.data.reminders_enabled,
+          habit_reminders: profRes.data.habit_reminders || {}
         };
+        HABIT_REMINDERS = PROFILE.habit_reminders || {};
+        saveLocalHabitReminders(HABIT_REMINDERS);
       }
       if(!customRes.error && customRes.data){
         customHabits = customRes.data.map(function(row){
@@ -1122,7 +1161,8 @@
         birth_year: PROFILE.birth_year,
         life_expectancy_years: PROFILE.life_expectancy_years,
         reminder_time: PROFILE.reminder_time,
-        reminders_enabled: PROFILE.reminders_enabled
+        reminders_enabled: PROFILE.reminders_enabled,
+        habit_reminders: PROFILE.habit_reminders || {}
       }, { onConflict:'user_id' }).then(function(res){
         if(res.error) console.warn('cloud profile save failed:', res.error.message);
       });
