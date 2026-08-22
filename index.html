@@ -54,7 +54,7 @@
     border-radius:4px;
   }
 
-  /* ---------- background atmosphere ---------- */
+  /* ---------- background atmosphere: nebula + starfield + solar system ---------- */
   .atmosphere{
     position:fixed; inset:0; z-index:-1; overflow:hidden;
     background:
@@ -65,6 +65,44 @@
   .grain{position:absolute; inset:0; opacity:0.035; mix-blend-mode:overlay;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
+
+  /* drifting nebula gas clouds, brand-colored */
+  .nebula-cloud{position:absolute; border-radius:50%; filter:blur(70px); mix-blend-mode:screen; will-change:transform;}
+  .nc1{width:520px; height:520px; top:-12%; left:-8%; background:radial-gradient(circle, rgba(110,111,240,0.30), transparent 68%); animation:driftA 36s ease-in-out infinite;}
+  .nc2{width:600px; height:600px; top:20%; right:-16%; background:radial-gradient(circle, rgba(52,199,123,0.18), transparent 68%); animation:driftB 44s ease-in-out infinite;}
+  .nc3{width:460px; height:460px; bottom:-16%; left:22%; background:radial-gradient(circle, rgba(240,180,41,0.14), transparent 70%); animation:driftC 40s ease-in-out infinite;}
+  @keyframes driftA{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(40px,30px) scale(1.08);}}
+  @keyframes driftB{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-50px,20px) scale(0.95);}}
+  @keyframes driftC{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(30px,-40px) scale(1.06);}}
+
+  /* twinkling starfield, seeded by JS */
+  .starfield{position:absolute; inset:0;}
+  .starfield span{position:absolute; width:2px; height:2px; border-radius:50%; background:#C4CBE2; animation:twinkle 5s ease-in-out infinite;}
+  @keyframes twinkle{0%,100%{opacity:.12;}50%{opacity:.8;}}
+
+  /* small solar system, orbiting the top-right corner as ambient decoration */
+  .solar-system{position:absolute; top:-140px; right:-140px; width:520px; height:520px; opacity:.55; pointer-events:none;}
+  .solar-sun{
+    position:absolute; top:50%; left:50%; width:34px; height:34px; margin:-17px 0 0 -17px;
+    border-radius:50%; background:radial-gradient(circle, #FFE8B0, #F0B429 55%, transparent 75%);
+    box-shadow:0 0 40px 10px rgba(240,180,41,0.35);
+  }
+  .orbit-ring{
+    position:absolute; top:50%; left:50%; border:1px solid rgba(238,241,248,0.08); border-radius:50%;
+    transform:translate(-50%,-50%);
+  }
+  .orbit-ring.r1{width:170px; height:170px;}
+  .orbit-ring.r2{width:280px; height:280px;}
+  .orbit-ring.r3{width:400px; height:400px;}
+  .orbit-spin{position:absolute; inset:0; animation:spin linear infinite;}
+  .orbit-ring.r1 .orbit-spin{animation-duration:24s;}
+  .orbit-ring.r2 .orbit-spin{animation-duration:46s; animation-direction:reverse;}
+  .orbit-ring.r3 .orbit-spin{animation-duration:70s;}
+  @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  .planet{position:absolute; top:50%; left:100%; width:9px; height:9px; margin:-4.5px 0 0 -4.5px; border-radius:50%;}
+  .orbit-ring.r1 .planet{background:#8C8DF5; box-shadow:0 0 8px rgba(140,141,245,0.7);}
+  .orbit-ring.r2 .planet{width:6px; height:6px; margin-top:-3px; margin-left:-3px; background:#34C77B; box-shadow:0 0 8px rgba(52,199,123,0.7);}
+  .orbit-ring.r3 .planet{width:12px; height:12px; margin-top:-6px; margin-left:-6px; background:#F0716B; box-shadow:0 0 10px rgba(240,113,107,0.6);}
 
   /* ---------- header ---------- */
   header{
@@ -317,7 +355,7 @@
 
   /* ---------- login overlay ---------- */
   .auth-overlay{
-    position:fixed; inset:0; z-index:100; background:rgba(4,6,12,0.82); backdrop-filter:blur(6px);
+    position:fixed; inset:0; z-index:100; background:rgba(4,6,12,0.72); backdrop-filter:blur(4px);
     display:flex; align-items:center; justify-content:center; padding:20px;
   }
   .auth-overlay.hidden{display:none;}
@@ -366,6 +404,31 @@
     padding:10px 12px; margin-bottom:16px; line-height:1.5;
   }
 
+  /* ---------- stepped opening flow ---------- */
+  .auth-step{display:none;}
+  .auth-step.active{display:block; animation:stepIn .35s ease both;}
+  @keyframes stepIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .auth-progress{display:flex; gap:6px; margin-bottom:18px;}
+  .auth-progress i{height:3px; flex:1; border-radius:3px; background:var(--hairline); display:block;}
+  .auth-progress i.done{background:var(--guardian);}
+  .welcome-mark{position:relative; width:72px; height:72px; margin:2px auto 18px;}
+  .welcome-mark .ring{
+    position:absolute; inset:0; border-radius:50%; border:1px solid rgba(140,141,245,0.35);
+    animation:spin 18s linear infinite;
+  }
+  .welcome-mark .ring::after{
+    content:''; position:absolute; top:-2px; left:50%; width:5px; height:5px; margin-left:-2.5px;
+    border-radius:50%; background:var(--nebula); box-shadow:0 0 8px rgba(110,111,240,0.8);
+  }
+  .welcome-mark img{position:absolute; top:50%; left:50%; width:34px; height:34px; transform:translate(-50%,-50%);}
+  .auth-card h2.centered{text-align:center;}
+  .auth-card p.sub-copy.centered{text-align:center;}
+  .step-back{
+    background:none; border:none; color:var(--muted-2); font-size:12.5px; cursor:pointer;
+    padding:0; margin-bottom:14px; display:inline-flex; align-items:center; gap:4px;
+  }
+  .step-back:hover{color:var(--muted);}
+
   /* ---------- time remaining / perspective ---------- */
   .perspective-card{
     background:var(--panel); border:1px solid var(--hairline); border-radius:20px; padding:26px;
@@ -408,34 +471,61 @@
 </head>
 <body>
 
-<div class="atmosphere"><div class="grain"></div></div>
+<div class="atmosphere">
+  <div class="starfield" id="starfield"></div>
+  <div class="nebula-cloud nc1"></div>
+  <div class="nebula-cloud nc2"></div>
+  <div class="nebula-cloud nc3"></div>
+  <div class="solar-system">
+    <div class="solar-sun"></div>
+    <div class="orbit-ring r1"><div class="orbit-spin"><div class="planet"></div></div></div>
+    <div class="orbit-ring r2"><div class="orbit-spin"><div class="planet"></div></div></div>
+    <div class="orbit-ring r3"><div class="orbit-spin"><div class="planet"></div></div></div>
+  </div>
+  <div class="grain"></div>
+</div>
 
 <!-- ================= AUTH OVERLAY ================= -->
 <div class="auth-overlay hidden" id="authOverlay">
   <div class="auth-card">
-    <div class="brand"><img src="logo.svg" alt="" style="width:26px;height:26px;vertical-align:middle;margin-right:8px;"><span class="brand-name" style="vertical-align:middle;">Guardian Nebula</span></div>
-    <div id="authConfigWarning" class="auth-config-warning" style="display:none;">
-      Cloud sync isn't configured yet — add your Supabase project URL and anon key in <span class="mono">index.html</span> to enable login and cross-device sync. Until then, everything works on this device only.
+    <div class="auth-progress"><i id="prog1"></i><i id="prog2"></i></div>
+
+    <!-- step 1: welcome -->
+    <div class="auth-step" data-step="welcome">
+      <div class="welcome-mark"><div class="ring"></div><img src="logo.svg" alt=""></div>
+      <h2 class="centered">Nine stars. One sky.</h2>
+      <p class="sub-copy centered">Sleep and stillness anchor the centre — the cold water, the walking, the sunlight, orbit around them. Sign in to carry your sky across devices, or keep it on this one.</p>
+      <button class="auth-submit" id="welcomeContinueBtn">Continue →</button>
+      <button class="auth-skip" id="authSkipBtnWelcome">Continue without an account — this device only</button>
     </div>
-    <h2 id="authTitle">Welcome back</h2>
-    <p class="sub-copy" id="authSub">Sign in to sync your constellation across devices.</p>
-    <div class="auth-tabs">
-      <button type="button" class="active" data-mode="signin">Sign in</button>
-      <button type="button" data-mode="signup">Create account</button>
+
+    <!-- step 2: credentials -->
+    <div class="auth-step" data-step="credentials">
+      <button class="step-back" id="authBackBtn">← Back</button>
+      <div class="brand"><img src="logo.svg" alt="" style="width:26px;height:26px;vertical-align:middle;margin-right:8px;"><span class="brand-name" style="vertical-align:middle;">Guardian Nebula</span></div>
+      <div id="authConfigWarning" class="auth-config-warning" style="display:none;">
+        Cloud sync isn't configured yet — add your Supabase project URL and anon key in <span class="mono">index.html</span> to enable login and cross-device sync. Until then, everything works on this device only.
+      </div>
+      <h2 id="authTitle">Welcome back</h2>
+      <p class="sub-copy" id="authSub">Sign in to sync your constellation across devices.</p>
+      <div class="auth-tabs">
+        <button type="button" class="active" data-mode="signin">Sign in</button>
+        <button type="button" data-mode="signup">Create account</button>
+      </div>
+      <div class="auth-field">
+        <label for="authEmail">Email</label>
+        <input type="email" id="authEmail" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label for="authPassword">Password</label>
+        <input type="password" id="authPassword" autocomplete="current-password">
+      </div>
+      <button class="auth-submit" id="authSubmitBtn">Sign in</button>
+      <div class="auth-msg" id="authMsg"></div>
+      <div class="auth-divider">or</div>
+      <button class="auth-google" id="authGoogleBtn">Continue with Google</button>
+      <button class="auth-skip" id="authSkipBtn">Continue without an account — this device only</button>
     </div>
-    <div class="auth-field">
-      <label for="authEmail">Email</label>
-      <input type="email" id="authEmail" autocomplete="email">
-    </div>
-    <div class="auth-field">
-      <label for="authPassword">Password</label>
-      <input type="password" id="authPassword" autocomplete="current-password">
-    </div>
-    <button class="auth-submit" id="authSubmitBtn">Sign in</button>
-    <div class="auth-msg" id="authMsg"></div>
-    <div class="auth-divider">or</div>
-    <button class="auth-google" id="authGoogleBtn">Continue with Google</button>
-    <button class="auth-skip" id="authSkipBtn">Continue without an account — this device only</button>
   </div>
 </div>
 
@@ -672,6 +762,21 @@
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
   var currentUser = null; // set once signed in
+
+  /* ---------------- ambient starfield ---------------- */
+  (function seedStarfield(){
+    var field = document.getElementById('starfield');
+    if(!field) return;
+    var html = '';
+    for(var i=0;i<80;i++){
+      var top = (Math.random()*100).toFixed(2);
+      var left = (Math.random()*100).toFixed(2);
+      var delay = (Math.random()*5).toFixed(2);
+      var size = (Math.random() < 0.15) ? '3px' : '2px';
+      html += '<span style="top:'+top+'%;left:'+left+'%;animation-delay:'+delay+'s;width:'+size+';height:'+size+';"></span>';
+    }
+    field.innerHTML = html;
+  })();
 
   /* ---------------- habit definitions ---------------- */
   var CATEGORIES = {
@@ -990,8 +1095,20 @@
   var authOverlay = document.getElementById('authOverlay');
   var authMode = 'signin';
 
-  function showAuthOverlay(){ authOverlay.classList.remove('hidden'); }
+  function showAuthOverlay(){ authOverlay.classList.remove('hidden'); showAuthStep('welcome'); }
   function hideAuthOverlay(){ authOverlay.classList.add('hidden'); }
+
+  function showAuthStep(step){
+    document.querySelectorAll('.auth-step').forEach(function(el){
+      el.classList.toggle('active', el.dataset.step === step);
+    });
+    document.getElementById('prog1').classList.toggle('done', true);
+    document.getElementById('prog2').classList.toggle('done', step === 'credentials');
+  }
+  function handleSkip(){ hideAuthOverlay(); boot(); }
+  document.getElementById('welcomeContinueBtn').addEventListener('click', function(){ showAuthStep('credentials'); });
+  document.getElementById('authBackBtn').addEventListener('click', function(){ showAuthStep('welcome'); });
+  document.getElementById('authSkipBtnWelcome').addEventListener('click', handleSkip);
 
   function setAuthMode(mode){
     authMode = mode;
@@ -1038,10 +1155,7 @@
     sb.auth.signInWithOAuth({ provider:'google' });
   });
 
-  document.getElementById('authSkipBtn').addEventListener('click', function(){
-    hideAuthOverlay();
-    boot();
-  });
+  document.getElementById('authSkipBtn').addEventListener('click', handleSkip);
 
   function onSignedIn(user){
     currentUser = user;
