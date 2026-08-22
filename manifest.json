@@ -1,0 +1,13 @@
+{
+  "name": "Guardian Nebula",
+  "short_name": "Nebula",
+  "description": "A personal constellation for the practices that hold you together.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#080B14",
+  "theme_color": "#080B14",
+  "icons": [
+    { "src": "logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

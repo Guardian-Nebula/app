@@ -1,818 +1,1838 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Guardian Nebula — your personal constellation</title>
+<meta name="description" content="Track the daily practices that hold you together. A quiet, constellation-shaped habit tracker for body, mind and recovery.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#080B14">
+<link rel="apple-touch-icon" href="logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --bg-deep:#14152B;
-    --bg-mid:#231A3C;
-    --bg-panel:#1B1930;
-    --ink:#ECE9F7;
-    --ink-dim:#9C97B8;
-    --ink-faint:#6B6790;
-    --gold:#E8B75E;
-    --gold-soft:#F2CC85;
-    --anchor:#B9C4E8;
-    --line-dim:rgba(160,155,200,0.16);
-    --line-lit:rgba(232,183,94,0.55);
-    --unlit:#3A3856;
-    --panel-border:rgba(236,233,247,0.08);
-    --danger:#D98080;
+    --void:#080B14;
+    --panel:#10182B;
+    --panel-2:#141F38;
+    --hairline:#22304C;
+    --text:#EEF1F8;
+    --muted:#8A93AC;
+    --muted-2:#5E6786;
+    --guardian:#34C77B;
+    --guardian-soft:rgba(52,199,123,0.16);
+    --ember:#F0B429;
+    --ember-soft:rgba(240,180,41,0.16);
+    --nebula:#6E6FF0;
+    --nebula-soft:rgba(110,111,240,0.18);
+    --dim-star:#3A4258;
+    --radius:14px;
   }
+
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
   body{
-    background:
-      radial-gradient(ellipse 900px 500px at 20% -10%, rgba(185,196,232,0.10), transparent 60%),
-      radial-gradient(ellipse 700px 600px at 100% 10%, rgba(232,183,94,0.06), transparent 55%),
-      linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-mid) 100%);
-    color:var(--ink);
-    font-family:'Work Sans', sans-serif;
-    min-height:100vh;
+    margin:0;
+    background:var(--void);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    line-height:1.5;
     -webkit-font-smoothing:antialiased;
   }
-  .mono{font-family:'JetBrains Mono', monospace;}
-  h1,h2,h3,.display{font-family:'Fraunces', serif;}
+  h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
   a{color:inherit;}
-  button{font-family:inherit;cursor:pointer;}
-  ::selection{background:rgba(232,183,94,0.3);}
+  ::selection{background:var(--guardian-soft);}
+  button{font-family:inherit;}
 
-  /* ---------- layout scaffolding ---------- */
-  .view{display:none;}
-  .view.active{display:block;animation:fadeIn .5s ease both;}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  :focus-visible{
+    outline:2px solid var(--guardian);
+    outline-offset:3px;
+    border-radius:4px;
+  }
 
-  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
-  .stars-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
-  .stars-bg span{position:absolute;width:2px;height:2px;border-radius:50%;background:var(--ink-faint);opacity:.5;animation:twinkleBg 5s ease-in-out infinite;}
-  @keyframes twinkleBg{0%,100%{opacity:.15;}50%{opacity:.7;}}
+  /* ---------- background atmosphere ---------- */
+  .atmosphere{
+    position:fixed; inset:0; z-index:-1; overflow:hidden;
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(110,111,240,0.14), transparent 55%),
+      radial-gradient(ellipse at 85% 10%, rgba(52,199,123,0.08), transparent 50%),
+      var(--void);
+  }
+  .grain{position:absolute; inset:0; opacity:0.035; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
 
-  .nebula-cloud{position:absolute;border-radius:50%;filter:blur(60px);mix-blend-mode:screen;will-change:transform;}
-  .nc1{width:520px;height:520px;top:-10%;left:-8%;background:radial-gradient(circle, rgba(183,140,232,0.28), transparent 68%);animation:driftA 34s ease-in-out infinite;}
-  .nc2{width:600px;height:600px;top:30%;right:-14%;background:radial-gradient(circle, rgba(232,140,160,0.20), transparent 68%);animation:driftB 42s ease-in-out infinite;}
-  .nc3{width:460px;height:460px;bottom:-14%;left:20%;background:radial-gradient(circle, rgba(127,212,224,0.18), transparent 68%);animation:driftC 38s ease-in-out infinite;}
-  .nc4{width:420px;height:420px;top:5%;left:45%;background:radial-gradient(circle, rgba(232,183,94,0.14), transparent 70%);animation:driftA 46s ease-in-out infinite reverse;}
-  @keyframes driftA{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(40px,30px) scale(1.08);}}
-  @keyframes driftB{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-50px,20px) scale(0.95);}}
-  @keyframes driftC{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(30px,-40px) scale(1.06);}}
+  /* ---------- header ---------- */
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px clamp(20px,5vw,56px);
+    border-bottom:1px solid var(--hairline);
+    flex-wrap:wrap; gap:14px;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand img{width:30px; height:30px; display:block;}
+  .brand-name{font-weight:600; font-size:16px; letter-spacing:0.01em;}
+  .brand-name .sub{display:block; font-size:11px; color:var(--muted-2); font-weight:400; letter-spacing:0.08em; text-transform:uppercase; font-family:'Inter',sans-serif;}
+  nav{display:flex; gap:6px; align-items:center;}
+  nav button.navlink{
+    background:none; border:1px solid transparent; color:var(--muted);
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:500;
+    padding:8px 14px; border-radius:999px; cursor:pointer;
+    transition:color .2s ease, border-color .2s ease, background .2s ease;
+  }
+  nav button.navlink:hover{color:var(--text);}
+  nav button.navlink.active{color:var(--guardian); border-color:var(--guardian-soft); background:var(--guardian-soft);}
 
-  /* ---------- intro view ---------- */
-  #view-intro .hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:80px 24px;}
-  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-soft);margin:0 0 22px;}
-  .eyebrow::before{content:'✦';margin-right:8px;}
-  h1.hero-title{font-size:clamp(38px,6vw,68px);line-height:1.05;font-weight:500;margin:0 0 24px;max-width:14ch;}
-  h1.hero-title em{font-style:italic;color:var(--gold-soft);}
-  .hero-sub{font-size:18px;line-height:1.6;color:var(--ink-dim);max-width:52ch;margin:0 0 40px;}
+  .account-chip{
+    display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted);
+    border-left:1px solid var(--hairline); padding-left:14px; margin-left:6px;
+  }
+  .account-chip b{color:var(--text); font-weight:500;}
+  .account-chip button{
+    background:none; border:1px solid var(--hairline); color:var(--muted);
+    padding:6px 12px; border-radius:999px; font-size:12.5px; cursor:pointer;
+  }
+  .account-chip button:hover{color:var(--text); border-color:var(--muted-2);}
+  .sync-pill{
+    font-size:11px; padding:4px 9px; border-radius:999px; letter-spacing:0.03em;
+  }
+  .sync-pill.cloud{background:var(--guardian-soft); color:var(--guardian);}
+  .sync-pill.local{background:var(--ember-soft); color:var(--ember);}
+
+  /* ---------- hero / constellation ---------- */
+  .hero{
+    padding:clamp(28px,6vw,64px) clamp(20px,5vw,56px) 20px;
+    display:grid; gap:40px;
+  }
+  .hero-copy{max-width:640px;}
+  .eyebrow{
+    font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--nebula);
+    font-weight:600; margin:0 0 14px;
+  }
+  .hero h1{
+    font-size:clamp(30px,4.4vw,46px); line-height:1.08; margin:0 0 16px; font-weight:600;
+    letter-spacing:-0.01em;
+  }
+  .hero p{color:var(--muted); font-size:15.5px; max-width:52ch; margin:0;}
+
+  .constellation-wrap{
+    position:relative;
+    border:1px solid var(--hairline);
+    border-radius:20px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.015), transparent 40%), var(--panel);
+    overflow:hidden;
+  }
+  .constellation-wrap svg{display:block; width:100%; height:auto;}
+  .edge{stroke:var(--hairline); stroke-width:1.4; fill:none;}
+  .edge.lit{stroke:rgba(52,199,123,0.35);}
+
+  .star-btn{cursor:pointer;}
+  .star-core{transition:opacity .35s ease, filter .35s ease;}
+  .star-ring{fill:none; transition:opacity .35s ease, stroke .35s ease;}
+  .star-icon{transform-box:fill-box; transform-origin:center;}
+  .star-label{
+    font-family:'Inter',sans-serif; font-size:12.5px; font-weight:500; fill:var(--muted);
+    pointer-events:none; transition:fill .3s ease;
+  }
+  .star-btn.done .star-label{fill:var(--text);}
+  .star-btn.done .star-core{filter:drop-shadow(0 0 8px rgba(52,199,123,0.55));}
+  .star-btn.streak-hot .star-core{filter:drop-shadow(0 0 12px rgba(240,180,41,0.75));}
+  .star-btn.dim .star-icon{opacity:0.38;}
+
+  /* per-habit idle animations — only active while .done */
+  @keyframes iconPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.14);}}
+  @keyframes iconSway{0%,100%{transform:rotate(-6deg);}50%{transform:rotate(6deg);}}
+  @keyframes iconBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+  @keyframes iconSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  @keyframes iconStep{0%,100%{transform:translateX(-2px);}50%{transform:translateX(2px);}}
+  @keyframes iconBeat{0%,60%,100%{transform:scale(1);}30%{transform:scale(1.18);}}
+  @keyframes iconDrip{0%{transform:translateY(-2px);}60%{transform:translateY(3px);}100%{transform:translateY(-2px);}}
+  @keyframes iconGlow{0%,100%{opacity:0.85;}50%{opacity:1;}}
+
+  .star-btn.done .icon-sleep{animation:iconGlow 4s ease-in-out infinite;}
+  .star-btn.done .icon-meditate{animation:iconPulse 4.5s ease-in-out infinite;}
+  .star-btn.done .icon-cold{animation:iconDrip 1.8s ease-in-out infinite;}
+  .star-btn.done .icon-sun{animation:iconSpin 14s linear infinite;}
+  .star-btn.done .icon-earth{animation:iconSway 3.2s ease-in-out infinite;}
+  .star-btn.done .icon-walk{animation:iconStep 1.1s ease-in-out infinite;}
+  .star-btn.done .icon-workout{animation:iconSway 1.4s ease-in-out infinite;}
+  .star-btn.done .icon-food{animation:iconBob 2.6s ease-in-out infinite;}
+  .star-btn.done .icon-social{animation:iconBeat 2.2s ease-in-out infinite;}
+  .star-btn.done .icon-spark{animation:iconPulse 2.4s ease-in-out infinite;}
+
+  .today-strip{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;
+    padding:18px 22px; border-top:1px solid var(--hairline);
+  }
+  .today-score{display:flex; align-items:baseline; gap:8px;}
+  .today-score .num{font-size:30px; font-weight:600; font-family:'Space Grotesk',sans-serif;}
+  .today-score .lbl{color:var(--muted); font-size:13px;}
+  .today-date{color:var(--muted-2); font-size:13px;}
+  .hint{color:var(--muted-2); font-size:12.5px;}
+
+  /* ---------- log popover ---------- */
+  .popover{
+    position:absolute; z-index:20; width:230px;
+    background:var(--panel-2); border:1px solid var(--hairline); border-radius:12px;
+    padding:16px; box-shadow:0 18px 40px rgba(0,0,0,0.45);
+    display:none;
+  }
+  .popover.open{display:block;}
+  .popover h4{margin:0 0 4px; font-size:14px;}
+  .popover .cat{font-size:11px; color:var(--muted-2); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px;}
+  .toggle-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .toggle{
+    position:relative; width:42px; height:24px; border-radius:999px; background:var(--hairline);
+    border:none; cursor:pointer; transition:background .2s ease;
+  }
+  .toggle::after{
+    content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%;
+    background:var(--muted); transition:transform .2s ease, background .2s ease;
+  }
+  .toggle.on{background:var(--guardian-soft);}
+  .toggle.on::after{transform:translateX(18px); background:var(--guardian);}
+  .num-row label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px;}
+  .num-row input{
+    width:100%; background:var(--void); border:1px solid var(--hairline); border-radius:8px;
+    color:var(--text); font-family:'JetBrains Mono',monospace; font-size:13px; padding:8px 10px;
+  }
+  .popover .streak-note{margin-top:10px; font-size:11.5px; color:var(--muted-2);}
+  .popover-close{
+    position:absolute; top:10px; right:10px; background:none; border:none; color:var(--muted);
+    cursor:pointer; font-size:16px; line-height:1; padding:2px;
+  }
+
+  /* ---------- shared section chrome ---------- */
+  section.page-section{padding:10px clamp(20px,5vw,56px) 20px;}
+  .section-head{display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap;}
+  .section-head h2{margin:0; font-size:20px; font-weight:600;}
+  .section-head p{margin:4px 0 0; color:var(--muted); font-size:13.5px; max-width:60ch;}
+
+  /* ---------- dashboard tabs ---------- */
+  .tabbar{
+    display:flex; gap:4px; border-bottom:1px solid var(--hairline); margin-bottom:26px;
+    overflow-x:auto;
+  }
+  .tabbar button{
+    background:none; border:none; color:var(--muted); font-family:'Inter',sans-serif;
+    font-size:14px; font-weight:500; padding:12px 4px; margin-right:22px; cursor:pointer;
+    border-bottom:2px solid transparent; white-space:nowrap;
+  }
+  .tabbar button.active{color:var(--text); border-bottom-color:var(--guardian);}
+
+  .stat-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:28px;}
+  .stat-card{
+    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius); padding:16px 18px;
+  }
+  .stat-card .k{font-size:24px; font-weight:600; font-family:'Space Grotesk',sans-serif;}
+  .stat-card .l{color:var(--muted); font-size:12.5px; margin-top:2px;}
+
+  .panel-title{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;}
+  .panel-title h3{margin:0; font-size:16px; font-weight:600;}
+  .panel-title .n{color:var(--muted-2); font-size:12.5px;}
+
+  .habit-block{
+    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    padding:18px 20px; margin-bottom:12px;
+  }
+  .habit-block-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:12px; flex-wrap:wrap;}
+  .habit-name{display:flex; align-items:center; gap:10px; font-weight:600; font-size:14.5px;}
+  .dot{width:9px; height:9px; border-radius:50%; flex:none;}
+  .habit-meta{display:flex; gap:16px; font-size:12.5px; color:var(--muted);}
+  .habit-meta b{color:var(--text); font-family:'JetBrains Mono',monospace; font-weight:500;}
+
+  .bars{display:flex; align-items:flex-end; gap:6px; height:64px;}
+  .bars.months{gap:4px;}
+  .bar{
+    flex:1; background:var(--hairline); border-radius:4px 4px 2px 2px; min-height:3px;
+    position:relative; transition:background .2s ease;
+  }
+  .bar.filled{background:var(--bar-color, var(--guardian));}
+  .bar-labels{display:flex; gap:6px; margin-top:6px;}
+  .bar-labels span{flex:1; text-align:center; font-size:10px; color:var(--muted-2);}
+  .bars.months .bar-labels span{font-size:9px;}
+
+  .heatmap{display:grid; grid-template-columns:repeat(7,1fr); gap:5px;}
+  .heat-cell{
+    aspect-ratio:1; border-radius:5px; background:var(--hairline);
+    display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--muted-2);
+  }
+
+  .empty-note{color:var(--muted-2); font-size:13px; padding:6px 2px 0;}
+
+  /* ---------- manual entry form ---------- */
+  .entry-form{
+    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    padding:20px; display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    align-items:end; margin-bottom:28px;
+  }
+  .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px;}
+  .field select, .field input{
+    width:100%; background:var(--void); border:1px solid var(--hairline); border-radius:8px;
+    color:var(--text); font-family:'Inter',sans-serif; font-size:13.5px; padding:9px 10px;
+  }
+  .field.checkfield{display:flex; align-items:center; gap:10px; padding-bottom:4px;}
   .btn{
-    display:inline-flex;align-items:center;gap:10px;
-    padding:14px 26px;border-radius:100px;border:1px solid transparent;
-    font-size:15px;font-weight:500;transition:all .25s ease;
+    background:var(--guardian-soft); color:var(--guardian); border:1px solid rgba(52,199,123,0.35);
+    border-radius:9px; padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer;
+    transition:background .2s ease;
   }
-  .btn-primary{background:var(--gold);color:#1B1408;}
-  .btn-primary:hover{background:var(--gold-soft);transform:translateY(-1px);}
-  .btn-ghost{background:transparent;border-color:var(--panel-border);color:var(--ink);}
-  .btn-ghost:hover{border-color:var(--ink-dim);}
-  .hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:64px;}
+  .btn:hover{background:rgba(52,199,123,0.26);}
+  .btn.ghost{background:none; color:var(--muted); border-color:var(--hairline);}
+  .btn.ghost:hover{color:var(--text); border-color:var(--muted-2);}
+  .entry-status{font-size:12.5px; color:var(--muted-2); grid-column:1 / -1;}
 
-  .nine-row{display:flex;gap:28px;flex-wrap:wrap;}
-  .nine-item{width:96px;text-align:center;}
-  .nine-item svg{width:36px;height:36px;animation:floatDrift 7s ease-in-out infinite;}
-  .nine-item .n-label{display:block;margin-top:10px;font-size:11px;color:var(--ink-faint);letter-spacing:.03em;}
-
-  .intro-section{position:relative;z-index:1;padding:80px 24px;border-top:1px solid var(--panel-border);}
-  .intro-section h2{font-size:clamp(26px,3.4vw,36px);font-weight:500;margin:0 0 18px;max-width:20ch;}
-  .intro-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:28px;margin-top:36px;}
-  .intro-card{padding:24px;border:1px solid var(--panel-border);border-radius:16px;background:rgba(255,255,255,0.02);}
-  .intro-card .num{font-family:'JetBrains Mono',monospace;color:var(--gold-soft);font-size:12px;margin-bottom:10px;display:block;}
-  .intro-card p{color:var(--ink-dim);font-size:14px;line-height:1.6;margin:8px 0 0;}
-  .intro-footer{position:relative;z-index:1;padding:40px 24px 60px;text-align:center;color:var(--ink-faint);font-size:12px;letter-spacing:.02em;}
-
-  /* ---------- login view ---------- */
-  #view-login .login-shell{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
-  .login-card{width:100%;max-width:400px;padding:38px 34px;border:1px solid var(--panel-border);border-radius:20px;background:rgba(27,25,48,0.7);backdrop-filter:blur(6px);}
-  .login-card h2{font-size:26px;margin:0 0 6px;font-weight:500;}
-  .login-card .sub{color:var(--ink-dim);font-size:13.5px;margin:0 0 28px;}
-  .field{margin-bottom:16px;}
-  .field label{display:block;font-size:12px;color:var(--ink-dim);margin-bottom:6px;letter-spacing:.02em;}
-  .field input{
-    width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--panel-border);
-    background:rgba(255,255,255,0.03);color:var(--ink);font-size:14px;outline:none;transition:border-color .2s;
+  .manage-row{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:10px 4px; border-bottom:1px solid var(--hairline); font-size:13.5px;
   }
-  .field input:focus{border-color:var(--gold-soft);}
-  .login-actions{display:flex;flex-direction:column;gap:10px;margin-top:22px;}
-  .btn-block{width:100%;justify-content:center;padding:12px;border-radius:10px;}
-  .login-toggle{text-align:center;font-size:13px;color:var(--ink-dim);margin-top:18px;}
-  .login-toggle button{background:none;border:none;color:var(--gold-soft);font-size:13px;text-decoration:underline;padding:0;}
-  .login-status{font-size:12.5px;margin-top:14px;padding:10px 12px;border-radius:8px;display:none;}
-  .login-status.show{display:block;}
-  .login-status.err{background:rgba(217,128,128,0.12);color:var(--danger);}
-  .login-status.ok{background:rgba(180,196,140,0.12);color:#B4D08C;}
-  .demo-note{font-size:12px;color:var(--ink-faint);text-align:center;margin-top:20px;line-height:1.6;}
-  .demo-note button{background:none;border:none;color:var(--ink-dim);text-decoration:underline;font-size:12px;padding:0;}
-  .gear-corner{position:fixed;top:22px;right:22px;z-index:2;}
-  .icon-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--panel-border);background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;color:var(--ink-dim);transition:all .2s;}
-  .icon-btn:hover{color:var(--ink);border-color:var(--ink-dim);}
-
-  /* ---------- dashboard view ---------- */
-  #view-dashboard{position:relative;z-index:1;padding:28px 24px 80px;}
-  .dash-header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:8px;}
-  .dash-greeting .eyebrow{margin-bottom:8px;}
-  .dash-greeting h1{font-size:clamp(26px,3.6vw,34px);font-weight:500;margin:0;}
-  .dash-controls{display:flex;gap:10px;align-items:center;}
-  .period-tabs{display:flex;gap:2px;background:rgba(255,255,255,0.03);border:1px solid var(--panel-border);border-radius:100px;padding:3px;}
-  .period-tabs button{padding:7px 14px;border-radius:100px;border:none;background:transparent;color:var(--ink-dim);font-size:12.5px;}
-  .period-tabs button.active{background:var(--gold);color:#1B1408;font-weight:500;}
-
-  .dash-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:24px;margin-top:32px;}
-  @media(max-width:860px){.dash-grid{grid-template-columns:1fr;}}
-  .panel{border:1px solid var(--panel-border);border-radius:20px;background:rgba(255,255,255,0.02);padding:26px;}
-  .panel h3{margin:0 0 4px;font-size:18px;font-weight:500;}
-  .panel .panel-sub{color:var(--ink-faint);font-size:13px;margin:0 0 18px;}
-
-  /* constellation */
-  .lit-count{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--gold-soft);}
-  .const-svg{width:100%;height:auto;display:block;}
-  .star-node{cursor:pointer;}
-  .star-node circle.ring{fill:none;stroke:var(--panel-border);stroke-width:1;}
-  .star-node .label{font-family:'Work Sans',sans-serif;font-size:12px;fill:var(--ink-dim);}
-  .star-node .icon-shape{fill:var(--unlit);stroke:var(--unlit);transition:fill .5s ease, stroke .5s ease;}
-  .star-node.lit .icon-shape{fill:var(--star-color, var(--gold));stroke:var(--star-color, var(--gold));}
-  .star-node .halo{fill:none;opacity:0;transition:opacity .5s ease;}
-  .star-node.lit .halo{opacity:.55;}
-  .star-node.pulse .halo{animation:haloPulse 2.4s ease-in-out infinite;}
-  @keyframes haloPulse{0%,100%{opacity:.4;}50%{opacity:.75;}}
-  .star-node.pop .icon-shape{animation:pop .5s ease;}
-  @keyframes pop{0%{transform:scale(1);}40%{transform:scale(1.35);}100%{transform:scale(1);}}
-
-  /* floating drift — icon + halo wander gently inside their fixed node */
-  .floater{animation:floatDrift 7s ease-in-out infinite;}
-  @keyframes floatDrift{
-    0%{transform:translate(0,0) rotate(0deg);}
-    25%{transform:translate(2.5px,-3px) rotate(1deg);}
-    50%{transform:translate(-2px,2.5px) rotate(-1deg);}
-    75%{transform:translate(-3px,-1.5px) rotate(0.5deg);}
-    100%{transform:translate(0,0) rotate(0deg);}
+  .manage-row:last-child{border-bottom:none;}
+  .manage-name{display:flex; align-items:center; gap:9px;}
+  .manage-tag{font-size:10.5px; color:var(--muted-2); text-transform:uppercase; letter-spacing:0.05em; margin-left:4px;}
+  .manage-wrap{
+    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    padding:6px 16px; margin-bottom:28px;
   }
-  .const-line{stroke:var(--line-dim);stroke-width:1.4;transition:stroke .5s ease, stroke-width .5s ease, opacity .5s ease;}
-  .const-line.lit{stroke:var(--line-lit);stroke-width:2;}
 
-  /* manual entry */
-  .entry-panel{display:none;margin-top:18px;padding:16px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid var(--panel-border);}
-  .entry-panel.show{display:block;animation:fadeIn .3s ease both;}
-  .entry-panel .row{display:flex;gap:10px;align-items:center;margin-bottom:10px;}
-  .entry-panel input[type=number]{width:70px;padding:8px;border-radius:8px;border:1px solid var(--panel-border);background:rgba(0,0,0,0.2);color:var(--ink);font-size:13px;}
-  .entry-panel input[type=text]{flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--panel-border);background:rgba(0,0,0,0.2);color:var(--ink);font-size:13px;}
-  .entry-panel .entry-title{font-size:13px;color:var(--ink-dim);margin-bottom:10px;}
-  .btn-small{padding:8px 16px;border-radius:8px;font-size:13px;}
+  /* ---------- device connections ---------- */
+  .device-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-bottom:10px;}
+  .device-card{
+    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    padding:18px; display:flex; flex-direction:column; gap:10px;
+  }
+  .device-card .dev-head{display:flex; align-items:center; gap:10px;}
+  .device-card .dev-icon{width:30px; height:30px; flex:none; color:var(--nebula);}
+  .device-card .dev-name{font-weight:600; font-size:14.5px;}
+  .device-card .dev-status{font-size:12px; color:var(--muted-2);}
+  .device-card .dev-status.connected{color:var(--guardian);}
+  .device-card p{margin:0; font-size:12.5px; color:var(--muted); line-height:1.5;}
+  .device-note{
+    background:var(--nebula-soft); border:1px solid rgba(110,111,240,0.3); border-radius:10px;
+    padding:14px 16px; font-size:12.5px; color:var(--text); margin-top:6px;
+  }
 
-  /* stat pills */
-  .stat-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;}
-  .stat-pill{flex:1;min-width:110px;padding:14px;border-radius:14px;background:rgba(255,255,255,0.025);border:1px solid var(--panel-border);}
-  .stat-pill .val{font-family:'JetBrains Mono',monospace;font-size:22px;color:var(--gold-soft);}
-  .stat-pill .lbl{font-size:11.5px;color:var(--ink-faint);margin-top:4px;}
+  /* ---------- login overlay ---------- */
+  .auth-overlay{
+    position:fixed; inset:0; z-index:100; background:rgba(4,6,12,0.82); backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .auth-overlay.hidden{display:none;}
+  .auth-card{
+    width:100%; max-width:380px; background:var(--panel-2); border:1px solid var(--hairline);
+    border-radius:18px; padding:28px 26px; box-shadow:0 30px 70px rgba(0,0,0,0.5);
+  }
+  .auth-card .brand{margin-bottom:18px;}
+  .auth-card h2{margin:0 0 6px; font-size:19px; font-weight:600;}
+  .auth-card .sub-copy{color:var(--muted); font-size:13px; margin:0 0 20px;}
+  .auth-tabs{display:flex; gap:4px; margin-bottom:18px; background:var(--void); border-radius:10px; padding:4px;}
+  .auth-tabs button{
+    flex:1; background:none; border:none; color:var(--muted); font-size:13px; font-weight:500;
+    padding:8px; border-radius:7px; cursor:pointer;
+  }
+  .auth-tabs button.active{background:var(--panel); color:var(--text);}
+  .auth-field{margin-bottom:12px;}
+  .auth-field label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px;}
+  .auth-field input{
+    width:100%; background:var(--void); border:1px solid var(--hairline); border-radius:9px;
+    color:var(--text); font-size:14px; padding:10px 12px;
+  }
+  .auth-submit{
+    width:100%; background:var(--guardian); color:#06170F; border:none; border-radius:9px;
+    padding:11px; font-size:14px; font-weight:600; cursor:pointer; margin-top:4px;
+  }
+  .auth-submit:hover{filter:brightness(1.06);}
+  .auth-divider{display:flex; align-items:center; gap:10px; color:var(--muted-2); font-size:11.5px; margin:16px 0;}
+  .auth-divider::before,.auth-divider::after{content:''; flex:1; height:1px; background:var(--hairline);}
+  .auth-google{
+    width:100%; background:var(--void); border:1px solid var(--hairline); color:var(--text);
+    border-radius:9px; padding:10px; font-size:13.5px; font-weight:500; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .auth-google:hover{border-color:var(--muted-2);}
+  .auth-skip{
+    display:block; text-align:center; margin-top:16px; font-size:12.5px; color:var(--muted-2);
+    background:none; border:none; cursor:pointer; width:100%;
+  }
+  .auth-skip:hover{color:var(--muted);}
+  .auth-msg{font-size:12.5px; margin-top:12px; min-height:16px;}
+  .auth-msg.err{color:#F0716B;}
+  .auth-msg.ok{color:var(--guardian);}
+  .auth-config-warning{
+    font-size:12px; color:var(--ember); background:var(--ember-soft); border-radius:8px;
+    padding:10px 12px; margin-bottom:16px; line-height:1.5;
+  }
 
-  /* wearables */
-  .wear-list{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
-  .wear-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,0.02);border:1px solid var(--panel-border);}
-  .wear-item .wname{font-size:14px;display:flex;align-items:center;gap:10px;}
-  .wear-dot{width:8px;height:8px;border-radius:50%;background:var(--unlit);transition:background .3s;}
-  .wear-item.connected .wear-dot{background:#B4D08C;box-shadow:0 0 8px rgba(180,208,140,.6);}
-  .wear-toggle{font-size:12px;padding:6px 14px;border-radius:100px;border:1px solid var(--panel-border);background:transparent;color:var(--ink-dim);}
-  .wear-item.connected .wear-toggle{color:#B4D08C;border-color:rgba(180,208,140,.4);}
-  .wear-note{font-size:11.5px;color:var(--ink-faint);margin-top:14px;line-height:1.6;}
+  /* ---------- time remaining / perspective ---------- */
+  .perspective-card{
+    background:var(--panel); border:1px solid var(--hairline); border-radius:20px; padding:26px;
+  }
+  .perspective-empty{color:var(--muted); font-size:13.5px;}
+  .perspective-setup{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-top:14px; align-items:end;}
+  .perspective-results{margin-top:22px; display:none;}
+  .perspective-results.show{display:block;}
+  .life-grid{
+    display:grid; grid-template-columns:repeat(10,1fr); gap:4px; margin:18px 0;
+    max-width:520px;
+  }
+  .life-grid.weeks{grid-template-columns:repeat(52,1fr); gap:2px; max-width:100%;}
+  .life-cell{aspect-ratio:1; border-radius:3px; background:var(--hairline);}
+  .life-grid.weeks .life-cell{border-radius:1.5px;}
+  .life-cell.lived{background:var(--nebula);}
+  .life-cell.current{background:var(--guardian); box-shadow:0 0 0 2px rgba(52,199,123,0.35);}
+  .life-legend{display:flex; gap:18px; font-size:12px; color:var(--muted); margin-bottom:4px; flex-wrap:wrap;}
+  .life-legend span{display:inline-flex; align-items:center; gap:6px;}
+  .life-legend i{width:9px; height:9px; border-radius:2px; display:inline-block;}
+  .perspective-disclaimer{color:var(--muted-2); font-size:11.5px; margin-top:14px; line-height:1.6; max-width:64ch;}
 
-  /* life expectancy */
-  .life-inputs{display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap;}
-  .life-inputs .field{flex:1;min-width:130px;margin-bottom:0;}
-  .life-inputs input{width:100%;}
-  .life-summary{font-size:14px;line-height:1.7;color:var(--ink-dim);margin:18px 0 14px;}
-  .life-summary .mono{color:var(--gold-soft);}
-  .life-grid{display:grid;grid-template-columns:repeat(52,1fr);gap:2px;margin:18px 0;max-height:420px;overflow-y:auto;padding-right:2px;}
-  .life-grid::-webkit-scrollbar{width:6px;}
-  .life-grid::-webkit-scrollbar-thumb{background:var(--panel-border);border-radius:100px;}
-  .life-dot{aspect-ratio:1;border-radius:1.5px;background:var(--unlit);transition:background .3s;}
-  .life-dot.current{outline:1.5px solid var(--ink);box-shadow:0 0 6px rgba(232,183,94,0.7);}
-  .life-legend{display:flex;gap:16px;flex-wrap:wrap;margin:14px 0 4px;font-size:11.5px;color:var(--ink-faint);}
-  .life-legend span{display:inline-flex;align-items:center;gap:6px;}
-  .life-legend i{width:8px;height:8px;border-radius:2px;display:inline-block;}
-  .depletion-bar{height:8px;border-radius:100px;background:var(--unlit);overflow:hidden;margin-top:6px;}
-  .depletion-fill{height:100%;background:linear-gradient(90deg, var(--gold), var(--gold-soft));border-radius:100px;transition:width .6s ease;}
-  .life-caveat{font-size:11.5px;color:var(--ink-faint);margin-top:14px;line-height:1.6;}
-
-  .divide-block{margin-top:34px;padding-top:28px;border-top:1px solid var(--panel-border);}
-  .divide-block h4{font-family:'Fraunces',serif;font-size:17px;font-weight:500;margin:0 0 4px;}
-  .divide-block .panel-sub{margin-bottom:20px;}
-  .stack-bar{display:flex;height:22px;border-radius:100px;overflow:hidden;background:var(--unlit);}
-  .stack-seg{height:100%;transition:width .6s ease;}
-  .divide-legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:18px;}
-  .divide-item{display:flex;align-items:flex-start;gap:10px;}
-  .divide-item i{width:10px;height:10px;border-radius:3px;margin-top:4px;flex-shrink:0;}
-  .divide-item .dname{font-size:13px;color:var(--ink);}
-  .divide-item .dval{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-faint);margin-top:2px;}
-
-  .full-span{grid-column:1 / -1;}
-
-  /* modal */
-  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(10,9,20,0.65);backdrop-filter:blur(3px);z-index:10;align-items:center;justify-content:center;padding:20px;}
-  .modal-backdrop.show{display:flex;}
-  .modal{width:100%;max-width:420px;background:var(--bg-panel);border:1px solid var(--panel-border);border-radius:18px;padding:26px;}
-  .modal h3{margin:0 0 6px;}
-  .modal .sub{font-size:13px;color:var(--ink-dim);margin:0 0 20px;}
-  .modal-close{float:right;background:none;border:none;color:var(--ink-faint);font-size:18px;}
+  footer{
+    padding:26px clamp(20px,5vw,56px) 40px; border-top:1px solid var(--hairline);
+    color:var(--muted-2); font-size:12.5px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;
+  }
 
   @media (prefers-reduced-motion: reduce){
-    *{animation-duration:.001s !important;transition-duration:.001s !important;}
+    *{transition:none !important; scroll-behavior:auto !important; animation:none !important;}
+  }
+
+  @media (max-width:640px){
+    header{padding:16px 18px;}
+    nav .navlink{display:none;}
+    .today-strip{padding:16px;}
+    section.page-section{padding:6px 16px 20px;}
+    .life-grid{grid-template-columns:repeat(8,1fr);}
   }
 </style>
 </head>
 <body>
 
-<div class="stars-bg" id="starsBg">
-  <div class="nebula-cloud nc1"></div>
-  <div class="nebula-cloud nc2"></div>
-  <div class="nebula-cloud nc3"></div>
-  <div class="nebula-cloud nc4"></div>
+<div class="atmosphere"><div class="grain"></div></div>
+
+<!-- ================= AUTH OVERLAY ================= -->
+<div class="auth-overlay hidden" id="authOverlay">
+  <div class="auth-card">
+    <div class="brand"><img src="logo.svg" alt="" style="width:26px;height:26px;vertical-align:middle;margin-right:8px;"><span class="brand-name" style="vertical-align:middle;">Guardian Nebula</span></div>
+    <div id="authConfigWarning" class="auth-config-warning" style="display:none;">
+      Cloud sync isn't configured yet — add your Supabase project URL and anon key in <span class="mono">index.html</span> to enable login and cross-device sync. Until then, everything works on this device only.
+    </div>
+    <h2 id="authTitle">Welcome back</h2>
+    <p class="sub-copy" id="authSub">Sign in to sync your constellation across devices.</p>
+    <div class="auth-tabs">
+      <button type="button" class="active" data-mode="signin">Sign in</button>
+      <button type="button" data-mode="signup">Create account</button>
+    </div>
+    <div class="auth-field">
+      <label for="authEmail">Email</label>
+      <input type="email" id="authEmail" autocomplete="email">
+    </div>
+    <div class="auth-field">
+      <label for="authPassword">Password</label>
+      <input type="password" id="authPassword" autocomplete="current-password">
+    </div>
+    <button class="auth-submit" id="authSubmitBtn">Sign in</button>
+    <div class="auth-msg" id="authMsg"></div>
+    <div class="auth-divider">or</div>
+    <button class="auth-google" id="authGoogleBtn">Continue with Google</button>
+    <button class="auth-skip" id="authSkipBtn">Continue without an account — this device only</button>
+  </div>
 </div>
 
-<!-- ================= INTRO ================= -->
-<section id="view-intro" class="view active">
-  <div class="hero wrap">
+<header>
+  <div class="brand">
+    <img src="logo.svg" alt="">
+    <div class="brand-name">Guardian Nebula<span class="sub">personal constellation</span></div>
+  </div>
+  <nav>
+    <button class="navlink active" data-scroll="#sky">Sky</button>
+    <button class="navlink" data-scroll="#dashboard">Dashboard</button>
+    <button class="navlink" data-scroll="#perspective">Perspective</button>
+    <button class="navlink" data-scroll="#reminders">Reminders</button>
+    <button class="navlink" data-scroll="#devices">Devices</button>
+    <span class="account-chip" id="accountChip"></span>
+  </nav>
+</header>
+
+<section class="hero" id="sky">
+  <div class="hero-copy">
     <p class="eyebrow">Guardian Nebula</p>
-    <h1 class="hero-title">Nine stars.<br>One sky<br><em>you keep lit.</em></h1>
-    <p class="hero-sub">Sleep and stillness anchor the centre — the cold water, the walking, the sunlight, the small acts of nourishment and contact, orbit around them. Log a star when you show up for it. A lit sky is a day you held together.</p>
-    <div class="hero-actions">
-      <button class="btn btn-primary" onclick="goTo('login')">Begin your sky →</button>
-      <button class="btn btn-ghost" onclick="document.getElementById('learnMore').scrollIntoView({behavior:'smooth'})">How it works</button>
-    </div>
-    <div class="nine-row" id="introStars"></div>
+    <h1>Nine stars. One sky you keep lit.</h1>
+    <p>Sleep and stillness anchor the centre — everything else, the cold water, the walking, the sunlight, orbits around them. Tap a star to log it. A lit sky is a day you showed up for yourself.</p>
   </div>
 
-  <div class="intro-section wrap" id="learnMore">
-    <p class="eyebrow">How it works</p>
-    <h2>A quiet practice, not a scoreboard.</h2>
-    <div class="intro-grid">
-      <div class="intro-card"><span class="num">01</span><strong>Log by tapping a star</strong><p>Mark a practice done in one motion. No forms unless you want the detail — minutes, a note, whatever's useful to you later.</p></div>
-      <div class="intro-card"><span class="num">02</span><strong>Watch the lines connect</strong><p>Sleep and stillness sit at the centre. Every other star draws a line back to them once both ends are lit — your sky only takes shape when the pieces hold together.</p></div>
-      <div class="intro-card"><span class="num">03</span><strong>Bring your own data</strong><p>Enter things by hand, or sync a wearable. Guardian Nebula doesn't run a server of its own — your data stays with you, on your terms.</p></div>
-    </div>
-  </div>
+  <div class="constellation-wrap">
+    <svg id="constellationSvg" viewBox="0 0 800 460" xmlns="http://www.w3.org/2000/svg" aria-label="Habit constellation — tap a star to log today's practice">
+      <defs id="iconDefs"></defs>
+      <g id="edgesLayer"></g>
+      <g id="starsLayer"></g>
+    </svg>
 
-  <div class="intro-footer">Guardian Nebula — data stays on your device, or in your own Supabase project. Nothing is sent anywhere else.</div>
-</section>
-
-<!-- ================= LOGIN ================= -->
-<section id="view-login" class="view">
-  <div class="gear-corner">
-    <button class="icon-btn" title="Connect your Supabase project" onclick="openModal('supabaseModal')">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </button>
-  </div>
-  <div class="login-shell">
-    <div class="login-card">
-      <h2 id="loginTitle">Welcome back</h2>
-      <p class="sub" id="loginSub">Sign in to pick up your sky where you left it.</p>
-
-      <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email"/></div>
-      <div class="field"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"/></div>
-
-      <div class="login-status" id="loginStatus"></div>
-
-      <div class="login-actions">
-        <button class="btn btn-primary btn-block" id="loginSubmit" onclick="handleAuth()">Sign in</button>
+    <div class="today-strip">
+      <div class="today-score">
+        <span class="num mono" id="todayScore">0/9</span>
+        <span class="lbl">lit today</span>
       </div>
-      <p class="login-toggle" id="loginToggle">New here? <button onclick="toggleAuthMode()">Create an account</button></p>
-      <p class="demo-note">No Supabase project connected yet — <button onclick="enterDemo()">continue in demo mode</button> instead.</p>
+      <div class="today-date" id="todayDate"></div>
+      <div class="hint">Tap any star to log it</div>
+    </div>
+
+    <div class="popover" id="popover">
+      <button class="popover-close" id="popoverClose" aria-label="Close">✕</button>
+      <div class="cat" id="popCat"></div>
+      <h4 id="popName"></h4>
+      <div class="toggle-row">
+        <span style="font-size:13px; color:var(--muted);">Done today</span>
+        <button class="toggle" id="popToggle" aria-label="Toggle done"></button>
+      </div>
+      <div class="num-row" id="popNumRow">
+        <label id="popNumLabel">Minutes</label>
+        <input type="number" min="0" id="popNumInput" inputmode="numeric">
+      </div>
+      <div class="streak-note" id="popStreak"></div>
     </div>
   </div>
 </section>
 
-<!-- ================= DASHBOARD ================= -->
-<section id="view-dashboard" class="view">
-  <div class="wrap">
-    <div class="dash-header">
-      <div class="dash-greeting">
-        <p class="eyebrow" id="dashDate">—</p>
-        <h1 id="dashGreeting">Your sky, tonight</h1>
+<section class="page-section" id="dashboard">
+  <div class="section-head">
+    <div>
+      <h2>Dashboard</h2>
+      <p>Log manually for any date, or review your history across timeframes.</p>
+    </div>
+  </div>
+
+  <form class="entry-form" id="entryForm">
+    <div class="field">
+      <label for="entryDate">Date</label>
+      <input type="date" id="entryDate">
+    </div>
+    <div class="field">
+      <label for="entryHabit">Practice</label>
+      <select id="entryHabit"></select>
+    </div>
+    <div class="field checkfield">
+      <input type="checkbox" id="entryDone" style="width:16px;height:16px;">
+      <label for="entryDone" style="margin:0;">Done</label>
+    </div>
+    <div class="field" id="entryValueField">
+      <label for="entryValue" id="entryValueLabel">Minutes</label>
+      <input type="number" min="0" id="entryValue">
+    </div>
+    <div class="field">
+      <button type="submit" class="btn">Save entry</button>
+    </div>
+    <div class="entry-status" id="entryStatus"></div>
+  </form>
+
+  <div class="section-head" style="margin-bottom:12px;">
+    <div>
+      <h2 style="font-size:16px;">Your practices</h2>
+      <p>Not just these nine — track anything that matters to you.</p>
+    </div>
+  </div>
+  <form class="entry-form" id="addPracticeForm">
+    <div class="field">
+      <label for="addPracticeName">New practice</label>
+      <input type="text" id="addPracticeName" placeholder="e.g. Stretching" required>
+    </div>
+    <div class="field">
+      <label for="addPracticeCat">Category</label>
+      <select id="addPracticeCat"></select>
+    </div>
+    <div class="field">
+      <label for="addPracticeUnit">Unit (optional)</label>
+      <input type="text" id="addPracticeUnit" placeholder="e.g. minutes, reps, pages">
+    </div>
+    <div class="field">
+      <label for="addPracticeIcon">Icon</label>
+      <select id="addPracticeIcon"></select>
+    </div>
+    <div class="field">
+      <button type="submit" class="btn">Add to my sky</button>
+    </div>
+  </form>
+  <div class="manage-wrap">
+    <div id="manageList"></div>
+  </div>
+
+  <div class="tabbar" id="tabbar">
+    <button data-view="daily" class="active">Daily</button>
+    <button data-view="weekly">Weekly</button>
+    <button data-view="monthly">Monthly</button>
+    <button data-view="yearly">Yearly</button>
+    <button data-view="life">Life</button>
+  </div>
+
+  <div id="viewContent"></div>
+</section>
+
+<section class="page-section" id="perspective">
+  <div class="section-head">
+    <div>
+      <h2>Perspective</h2>
+      <p>In the spirit of memento mori — life laid out week by week, a statistical average rather than a prediction, as a reminder of roughly how much time there is to keep building the constellation.</p>
+    </div>
+  </div>
+  <div class="perspective-card" id="perspectiveCard">
+    <div class="perspective-setup" id="perspectiveSetup">
+      <div class="field">
+        <label for="birthYear">Birth year</label>
+        <input type="number" id="birthYear" placeholder="e.g. 1994" min="1900" max="2100">
       </div>
-      <div class="dash-controls">
-        <div class="period-tabs" id="periodTabs">
-          <button class="active" data-period="daily">Daily</button>
-          <button data-period="weekly">Weekly</button>
-          <button data-period="monthly">Monthly</button>
-          <button data-period="yearly">Yearly</button>
-          <button data-period="life">Life</button>
-        </div>
-        <button class="icon-btn" title="Connect your Supabase project" onclick="openModal('supabaseModal')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        </button>
-        <button class="icon-btn" title="Sign out" onclick="signOut()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        </button>
+      <div class="field">
+        <label for="lifeExpectancy">Average life expectancy</label>
+        <select id="lifeExpectancy">
+          <option value="73">Global average (~73 years)</option>
+          <option value="80">India, urban estimate (~70–72 years)</option>
+          <option value="72">India national average (~70 years)</option>
+          <option value="83">Higher-income country average (~80–83 years)</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="field" id="customExpectancyField" style="display:none;">
+        <label for="customExpectancy">Custom (years)</label>
+        <input type="number" id="customExpectancy" min="1" max="130">
+      </div>
+      <div class="field">
+        <button type="button" class="btn" id="perspectiveCalc">Show perspective</button>
       </div>
     </div>
-
-    <div class="stat-row" id="statRow"></div>
-
-    <div class="dash-grid">
-      <!-- constellation panel -->
-      <div class="panel">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <h3>Tonight's constellation</h3>
-          <span class="lit-count" id="litCount">0/9 lit</span>
-        </div>
-        <p class="panel-sub">Tap a star to log it. Lines connect once both ends are lit.</p>
-        <svg class="const-svg" id="constSvg" viewBox="0 0 640 620" xmlns="http://www.w3.org/2000/svg"></svg>
-        <div class="entry-panel" id="entryPanel">
-          <div class="entry-title" id="entryTitle">Log this</div>
-          <div class="row">
-            <input type="number" id="entryMinutes" min="0" placeholder="0" />
-            <span style="font-size:13px;color:var(--ink-dim);">minutes</span>
-          </div>
-          <div class="row"><input type="text" id="entryNote" placeholder="Optional note" /></div>
-          <div class="row" style="margin-bottom:0;">
-            <button class="btn btn-primary btn-small" onclick="saveEntry()">Save &amp; light star</button>
-            <button class="btn btn-ghost btn-small" onclick="closeEntry()">Cancel</button>
-          </div>
-        </div>
+    <div class="perspective-empty" id="perspectiveEmpty">Enter a birth year to see this — it's off until you ask for it.</div>
+    <div class="perspective-results" id="perspectiveResults">
+      <div class="stat-row" id="perspectiveStats"></div>
+      <div class="life-legend">
+        <span><i style="background:var(--nebula);"></i>Weeks lived</span>
+        <span><i style="background:var(--guardian);"></i>This week</span>
+        <span><i style="background:var(--hairline);"></i>Weeks ahead, at the average</span>
       </div>
-
-      <!-- right column -->
-      <div style="display:flex;flex-direction:column;gap:24px;">
-        <div class="panel">
-          <h3>Connect a device</h3>
-          <p class="panel-sub">Sync steps, sleep and heart data automatically.</p>
-          <div class="wear-list" id="wearList"></div>
-          <p class="wear-note">These toggles show the intended flow. Real sync needs OAuth handled by a Supabase edge function per provider — wire that up under your own project, then point the callback at <code>practice_logs</code>.</p>
-        </div>
-      </div>
-
-      <!-- life expectancy panel, full width -->
-      <div class="panel full-span">
-        <h3>Weeks, not years</h3>
-        <p class="panel-sub">Every square is one week of your life. A reminder, not a countdown — estimates only, and averages don't predict any one life.</p>
-        <div class="life-inputs">
-          <div class="field"><label>Year you were born</label><input type="number" id="birthYear" placeholder="1990" /></div>
-          <div class="field"><label>Life expectancy (years)</label><input type="number" id="lifeExpectancy" placeholder="80" /></div>
-        </div>
-        <div class="life-summary" id="lifeSummary"></div>
-        <div class="life-grid" id="lifeGrid"></div>
-        <div class="life-legend">
-          <span><i style="background:var(--unlit)"></i>Weeks ahead</span>
-          <span><i style="background:var(--gold)"></i>Weeks lived</span>
-          <span><i style="background:var(--ink);box-shadow:0 0 6px rgba(232,183,94,.7);"></i>This week</span>
-        </div>
-        <div class="depletion-bar"><div class="depletion-fill" id="depletionFill" style="width:0%"></div></div>
-        <p class="life-caveat">Roughly 52 weeks per row, one row per year, top to bottom. Global average life expectancy is around 73 years, but yours may differ widely by country, health and circumstance.</p>
-
-        <div class="divide-block">
-          <h4>Where the rest likely goes</h4>
-          <p class="panel-sub">A rough split of your remaining weeks across the activities that quietly claim most of a life — sleep, work, screens, everything else.</p>
-          <div class="stack-bar" id="divideBar"></div>
-          <div class="divide-legend" id="divideLegend"></div>
-        </div>
-      </div>
-    </div>
-
-    <div style="text-align:center;margin-top:40px;color:var(--ink-faint);font-size:12px;">
-      Guardian Nebula — this session's data lives in memory only, unless you connect Supabase above.
+      <div class="life-grid weeks" id="lifeGrid"></div>
+      <p class="perspective-disclaimer">Based on published average life-expectancy figures — a broad population average, not a personal medical prediction. Genetics, healthcare access, and habits like the ones tracked above all move this number in either direction for any one person. Meant for perspective, not anxiety — hide this section any time by leaving the birth year blank.</p>
     </div>
   </div>
 </section>
 
-<!-- ================= SUPABASE MODAL ================= -->
-<div class="modal-backdrop" id="supabaseModal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('supabaseModal')">✕</button>
-    <h3>Connect Supabase</h3>
-    <p class="sub">Bring your own project for real accounts and cross-device sync. Everything here stays on this page — nothing is sent to us.</p>
-    <div class="field"><label>Project URL</label><input type="text" id="sbUrl" placeholder="https://xxxx.supabase.co" /></div>
-    <div class="field"><label>Anon public key</label><input type="text" id="sbKey" placeholder="eyJhbGciOi..." /></div>
-    <p style="font-size:11.5px;color:var(--ink-faint);line-height:1.6;margin:6px 0 18px;">
-      Expects a <code>practice_logs</code> table (id, user_id, star, minutes, note, logged_at) with row-level security scoped to <code>auth.uid()</code>. Auth uses Supabase's email/password endpoint directly.
-    </p>
-    <button class="btn btn-primary btn-block" onclick="saveSupabaseConfig()">Save connection</button>
-    <p class="login-status show" id="sbStatus" style="margin-top:14px;background:rgba(255,255,255,0.04);color:var(--ink-dim);">Not connected — running in demo mode.</p>
+<section class="page-section" id="reminders">
+  <div class="section-head">
+    <div>
+      <h2>Reminders</h2>
+      <p>A nudge if the sky's still dim by evening. Works while this tab is open on this device.</p>
+    </div>
   </div>
-</div>
+  <div class="perspective-card">
+    <div class="perspective-setup" style="margin-top:0;">
+      <div class="field">
+        <label for="reminderEnableBtn">Notifications</label>
+        <button type="button" class="btn ghost" id="reminderEnableBtn">Enable browser notifications</button>
+      </div>
+      <div class="field">
+        <label for="reminderTime">Remind me at</label>
+        <input type="time" id="reminderTime" value="20:00">
+      </div>
+      <div class="field">
+        <button type="button" class="btn" id="reminderSaveBtn">Save</button>
+      </div>
+    </div>
+    <p class="perspective-disclaimer" id="reminderStatus">Notifications need your browser's permission and only fire while this tab is open on this device — a static page can't send background push notifications without a server behind it.</p>
+    <p class="perspective-disclaimer">Want this to feel like a real app on your phone? Open this page on your phone's browser and use "Add to Home Screen" (Safari) or "Install app" (Chrome) — it's set up as an installable PWA, so it opens full-screen with its own icon, like any other app.</p>
+  </div>
+</section>
+
+<section class="page-section" id="devices">
+  <div class="section-head">
+    <div>
+      <h2>Connect a device</h2>
+      <p>Sync steps, sleep, and workouts automatically instead of logging by hand.</p>
+    </div>
+  </div>
+  <div class="device-grid" id="deviceGrid"></div>
+  <div class="device-note">
+    None of these are wired up yet. Each one needs its own OAuth integration built server-side — a Supabase Edge Function holding that provider's token, since none of these APIs can be called safely from a static page. Manual entry and the constellation both work fully today; tell me which device you actually use and that's the one worth building first.
+  </div>
+</section>
+
+<footer>
+  <span id="storageModeNote">Guardian Nebula — data stays on this device.</span>
+  <span id="firstLogNote"></span>
+</footer>
 
 <script>
-/* ============================================================
-   STATE  (in-memory only — no browser storage per platform rules)
-   ============================================================ */
-const STARS = [
-  { id:'sleep',      label:'Sleep',        anchor:true,  x:290, y:300, icon:'moon',  color:'#B9C4E8' },
-  { id:'stillness',  label:'Stillness',    anchor:true,  x:352, y:332, icon:'lotus', color:'#C9AEEA' },
-  { id:'coldwater',  label:'Cold water',   anchor:false, x:140, y:180, icon:'drop',  color:'#7FD4E0' },
-  { id:'walking',    label:'Walking',      anchor:false, x:470, y:150, icon:'steps', color:'#E8946E' },
-  { id:'sunlight',   label:'Sunlight',     anchor:false, x:560, y:320, icon:'sun',   color:'#E8B75E' },
-  { id:'hydration',  label:'Hydration',    anchor:false, x:470, y:500, icon:'glass', color:'#7FA8E0' },
-  { id:'nourishment',label:'Nourishment',  anchor:false, x:320, y:570, icon:'plate', color:'#EAB98C' },
-  { id:'connection', label:'Connection',   anchor:false, x:165, y:500, icon:'hands', color:'#E88CA0' },
-  { id:'reflection', label:'Reflection',   anchor:false, x:95,  y:310, icon:'pen',   color:'#B78CE8' },
-];
+(function(){
+  "use strict";
 
-const EDGES = [
-  ['sleep','stillness'],
-  ['sleep','reflection'],
-  ['sleep','coldwater'],
-  ['stillness','nourishment'],
-  ['stillness','hydration'],
-  ['coldwater','walking'],
-  ['walking','sunlight'],
-  ['sunlight','hydration'],
-  ['hydration','nourishment'],
-  ['nourishment','connection'],
-  ['connection','reflection'],
-  ['reflection','coldwater'],
-];
-
-const WEARABLES = ['Apple Health','Fitbit','Oura','Garmin','Whoop'];
-
-let appState = {
-  authMode: 'signin',
-  session: null,          // { access_token, email } once "logged in"
-  supabase: { url:'', key:'', configured:false },
-  today: {},              // { starId: {logged:bool, minutes, note} }
-  wearables: {},          // { name: bool }
-  pendingStar: null,
-};
-STARS.forEach(s => appState.today[s.id] = { logged:false, minutes:0, note:'' });
-WEARABLES.forEach(w => appState.wearables[w] = false);
-
-/* ============================================================
-   BACKGROUND TWINKLE
-   ============================================================ */
-(function seedBg(){
-  const el = document.getElementById('starsBg');
-  let html = '';
-  for(let i=0;i<70;i++){
-    const top = Math.random()*100, left = Math.random()*100, delay = (Math.random()*5).toFixed(2);
-    html += `<span style="top:${top}%;left:${left}%;animation-delay:${delay}s;"></span>`;
+  /* ================= SUPABASE CONFIG =================
+     Fill these in after creating a Supabase project and running
+     supabase-schema.sql against it. Until then the app runs in
+     local-only mode (localStorage, no login required, no sync). */
+  var SUPABASE_URL = 'YOUR_SUPABASE_URL';
+  var SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+  var CLOUD_CONFIGURED = SUPABASE_URL.indexOf('YOUR_SUPABASE') === -1 && SUPABASE_ANON_KEY.indexOf('YOUR_SUPABASE') === -1;
+  var sb = null;
+  if(CLOUD_CONFIGURED && window.supabase){
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
-  el.insertAdjacentHTML('beforeend', html);
-})();
+  var currentUser = null; // set once signed in
 
-/* ============================================================
-   VIEW ROUTING
-   ============================================================ */
-function goTo(view){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.getElementById('view-'+view).classList.add('active');
-  window.scrollTo({top:0,behavior:'instant' in window ? 'instant':'auto'});
-  if(view === 'dashboard') renderDashboard();
-}
-
-/* ============================================================
-   ICON SHAPES (small inline SVG builders per star)
-   ============================================================ */
-function iconMarkup(type){
-  switch(type){
-    case 'moon':   return `<path class="icon-shape" d="M6 -6 A8 8 0 1 0 6 6 A6 6 0 1 1 6 -6 Z" />`;
-    case 'lotus':  return `<g class="icon-shape" stroke-width="0"><circle cx="0" cy="0" r="3.2"/><circle cx="-7" cy="2" r="2.4"/><circle cx="7" cy="2" r="2.4"/><circle cx="-4" cy="-6" r="2.4"/><circle cx="4" cy="-6" r="2.4"/></g>`;
-    case 'drop':   return `<path class="icon-shape" d="M0 -9 C 5 -1, 8 3, 0 9 C -8 3, -5 -1, 0 -9 Z" />`;
-    case 'steps':  return `<g class="icon-shape" stroke-width="0"><ellipse cx="-4" cy="-4" rx="3" ry="5" transform="rotate(-18 -4 -4)"/><ellipse cx="5" cy="5" rx="3" ry="5" transform="rotate(14 5 5)"/></g>`;
-    case 'sun':    return `<g class="icon-shape" stroke-width="2" stroke-linecap="round"><circle cx="0" cy="0" r="4.5" stroke-width="0"/><line x1="0" y1="-9" x2="0" y2="-11.5"/><line x1="0" y1="9" x2="0" y2="11.5"/><line x1="-9" y1="0" x2="-11.5" y2="0"/><line x1="9" y1="0" x2="11.5" y2="0"/><line x1="-6.3" y1="-6.3" x2="-8" y2="-8"/><line x1="6.3" y1="6.3" x2="8" y2="8"/><line x1="-6.3" y1="6.3" x2="-8" y2="8"/><line x1="6.3" y1="-6.3" x2="8" y2="-8"/></g>`;
-    case 'glass':  return `<path class="icon-shape" d="M-5 -9 L5 -9 L3.2 9 L-3.2 9 Z" />`;
-    case 'plate':  return `<g class="icon-shape" stroke-width="0"><circle cx="0" cy="0" r="9"/><circle cx="0" cy="0" r="9" fill="none"/></g>`;
-    case 'hands':  return `<g class="icon-shape" stroke-width="0"><circle cx="-4" cy="0" r="6" opacity="0.85"/><circle cx="4" cy="0" r="6" opacity="0.6"/></g>`;
-    case 'pen':    return `<g class="icon-shape" stroke-width="2.2" stroke-linecap="round"><line x1="-8" y1="8" x2="6" y2="-6"/><path d="M6 -6 l3 -3 l3 3 l-3 3 Z" stroke-width="0"/></g>`;
-    default: return '';
-  }
-}
-
-/* ============================================================
-   CONSTELLATION RENDER
-   ============================================================ */
-function starById(id){ return STARS.find(s=>s.id===id); }
-
-function renderConstellation(){
-  const svg = document.getElementById('constSvg');
-  const today = appState.today;
-  let lines = '';
-  EDGES.forEach(([a,b])=>{
-    const sa = starById(a), sb = starById(b);
-    const lit = today[a].logged && today[b].logged;
-    lines += `<line class="const-line ${lit?'lit':''}" x1="${sa.x}" y1="${sa.y}" x2="${sb.x}" y2="${sb.y}" />`;
-  });
-
-  let nodes = '';
-  STARS.forEach((s,i)=>{
-    const lit = today[s.id].logged;
-    const r = s.anchor ? 27 : 21;
-    const dur = (6.5 + (i % 4) * 0.9).toFixed(1);
-    const delay = (i * 0.35).toFixed(2);
-    nodes += `
-      <g class="star-node ${s.anchor?'anchor':''} ${lit?'lit pulse':''}" style="--star-color:${s.color};" transform="translate(${s.x},${s.y})" onclick="onStarClick('${s.id}')">
-        <g class="floater" style="animation-duration:${dur}s;animation-delay:-${delay}s;">
-          <circle class="halo" r="${r+10}" fill="url(#glow-${s.id})"/>
-          <g transform="scale(${s.anchor?1.5:1.2})">${iconMarkup(s.icon)}</g>
-        </g>
-        <circle class="ring" r="${r}"/>
-        <text class="label" y="${r+18}" text-anchor="middle">${s.label}</text>
-      </g>`;
-  });
-
-  const defs = `<defs>${STARS.map(s=>`
-    <radialGradient id="glow-${s.id}"><stop offset="0%" stop-color="${s.color}" stop-opacity="0.6"/><stop offset="100%" stop-color="${s.color}" stop-opacity="0"/></radialGradient>
-  `).join('')}</defs>`;
-
-  svg.innerHTML = defs + lines + nodes;
-
-  const litN = STARS.filter(s=>today[s.id].logged).length;
-  document.getElementById('litCount').textContent = `${litN}/9 lit`;
-}
-
-function onStarClick(id){
-  const today = appState.today[id];
-  if(today.logged){
-    // quick unlight on second tap
-    today.logged = false;
-    renderConstellation();
-    return;
-  }
-  appState.pendingStar = id;
-  document.getElementById('entryTitle').textContent = `Log ${starById(id).label.toLowerCase()}`;
-  document.getElementById('entryMinutes').value = '';
-  document.getElementById('entryNote').value = '';
-  document.getElementById('entryPanel').classList.add('show');
-}
-function closeEntry(){
-  document.getElementById('entryPanel').classList.remove('show');
-  appState.pendingStar = null;
-}
-async function saveEntry(){
-  const id = appState.pendingStar;
-  if(!id) return;
-  const minutes = parseInt(document.getElementById('entryMinutes').value)||0;
-  const note = document.getElementById('entryNote').value||'';
-  appState.today[id] = { logged:true, minutes, note };
-  closeEntry();
-  renderConstellation();
-  renderStats();
-
-  // fire-and-forget sync to Supabase if configured
-  if(appState.supabase.configured && appState.session){
-    try{
-      await fetch(`${appState.supabase.url}/rest/v1/practice_logs`, {
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'apikey': appState.supabase.key,
-          'Authorization': `Bearer ${appState.session.access_token}`,
-          'Prefer':'return=minimal'
-        },
-        body: JSON.stringify({ star:id, minutes, note, logged_at: new Date().toISOString() })
-      });
-    }catch(e){ console.warn('Supabase sync skipped:', e); }
-  }
-}
-
-/* ============================================================
-   STATS / PERIOD TABS  (mocked aggregates for demo)
-   ============================================================ */
-function renderStats(){
-  const period = document.querySelector('.period-tabs button.active')?.dataset.period || 'daily';
-  const litN = STARS.filter(s=>appState.today[s.id].logged).length;
-  const seed = { daily:[litN+'/9','Lit today', '—','Streak (days)'], };
-
-  // deterministic mock numbers per period, purely illustrative
-  const mock = {
-    daily:   [ [`${litN}/9`,'Lit tonight'], [`${Math.min(litN*2+3,14)}`,'Day streak'], [`${(litN*11)}%`,'Vs. your average'] ],
-    weekly:  [ ['5.4/9','Avg. lit / day'], ['3','Best streak'], ['61%','Week completion'] ],
-    monthly: [ ['142','Stars logged'], ['22','Active days'], ['71%','Month completion'] ],
-    yearly:  [ ['1,680','Stars logged'], ['9','Best month'], ['64%','Year completion'] ],
-    life:    [ [yearsLivedShort(),'Years lived'], [yearsRemainingShort(),'Years, roughly, ahead'], ['—','No pressure'] ],
+  /* ---------------- habit definitions ---------------- */
+  var CATEGORIES = {
+    recovery:{ color:'#34C77B', label:'Recovery' },
+    mind:{ color:'#34C77B', label:'Mind' },
+    body:{ color:'#F0B429', label:'Body reset' },
+    movement:{ color:'#8C8DF5', label:'Movement' },
+    fuel:{ color:'#8C8DF5', label:'Fuel' },
+    connection:{ color:'#8C8DF5', label:'Connection' }
   };
-  const set = mock[period] || mock.daily;
-  document.getElementById('statRow').innerHTML = set.map(([val,lbl])=>`
-    <div class="stat-pill"><div class="val mono">${val}</div><div class="lbl">${lbl}</div></div>
-  `).join('');
-}
-function yearsLivedShort(){ const v = computeLife(); return v ? v.lived : '—'; }
-function yearsRemainingShort(){ const v = computeLife(); return v ? v.remaining : '—'; }
 
-document.getElementById('periodTabs').addEventListener('click', (e)=>{
-  const btn = e.target.closest('button');
-  if(!btn) return;
-  document.querySelectorAll('.period-tabs button').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderStats();
-});
-
-/* ============================================================
-   WEARABLES
-   ============================================================ */
-function renderWearables(){
-  const el = document.getElementById('wearList');
-  el.innerHTML = WEARABLES.map(w=>`
-    <div class="wear-item ${appState.wearables[w]?'connected':''}" id="wear-${w.replace(/\s/g,'')}">
-      <span class="wname"><span class="wear-dot"></span>${w}</span>
-      <button class="wear-toggle" onclick="toggleWearable('${w}')">${appState.wearables[w]?'Connected':'Connect'}</button>
-    </div>
-  `).join('');
-}
-function toggleWearable(w){
-  appState.wearables[w] = !appState.wearables[w];
-  renderWearables();
-}
-
-/* ============================================================
-   LIFE EXPECTANCY GRAPH
-   ============================================================ */
-const NEBULA_ROW_HUES = ['#E8B75E','#E8946E','#E88CA0','#B78CE8','#7FA8E0','#7FD4E0'];
-
-function computeLife(){
-  const by = parseInt(document.getElementById('birthYear').value);
-  const exp = parseInt(document.getElementById('lifeExpectancy').value);
-  if(!by || !exp) return null;
-  const nowYear = new Date().getFullYear();
-  const lived = Math.max(0, Math.min(nowYear - by, exp)); // years, used by the stat pills
-  const remaining = Math.max(0, exp - lived);
-  const totalWeeks = exp * 52;
-  const livedWeeks = Math.max(0, Math.min(Math.floor((Date.now() - new Date(by,0,1).getTime()) / (7*24*3600*1000)), totalWeeks));
-  return { lived, remaining, exp, totalWeeks, livedWeeks };
-}
-
-function renderLifeGraph(){
-  const v = computeLife();
-  const grid = document.getElementById('lifeGrid');
-  const summary = document.getElementById('lifeSummary');
-  const fill = document.getElementById('depletionFill');
-
-  if(!v){
-    grid.innerHTML = '';
-    summary.innerHTML = 'Enter a birth year and a life expectancy to see the arc.';
-    fill.style.width = '0%';
-    return;
-  }
-  let dots = '';
-  for(let i=0;i<v.totalWeeks;i++){
-    const row = Math.floor(i/52);
-    const isLived = i < v.livedWeeks;
-    const isCurrent = i === v.livedWeeks;
-    const hue = NEBULA_ROW_HUES[row % NEBULA_ROW_HUES.length];
-    const style = isLived ? `background:${hue};` : '';
-    dots += `<div class="life-dot ${isCurrent?'current':''}" style="${style}" title="Week ${i+1}, year ${row+1}"></div>`;
-  }
-  grid.innerHTML = dots;
-  fill.style.width = `${Math.round((v.livedWeeks/v.totalWeeks)*100)}%`;
-  summary.innerHTML = `You've lived roughly <span class="mono">${v.livedWeeks.toLocaleString()}</span> weeks of an estimated <span class="mono">${v.totalWeeks.toLocaleString()}</span> — about <span class="mono">${v.remaining}</span> years still ahead, <span class="mono">${Math.round((v.livedWeeks/v.totalWeeks)*100)}%</span> of the way through the arc.`;
-  renderDivide(v);
-  renderStats();
-}
-
-/* Memento-Mori-style breakdown: roughly how the remaining weeks divide
-   across the activities that quietly claim most of a life. Fixed daily-hour
-   assumptions, stated plainly rather than hidden. */
-function renderDivide(v){
-  const currentAge = v.lived;
-  const remainingYears = v.remaining;
-  const retireAge = 65;
-  const workYears = Math.max(0, Math.min(remainingYears, retireAge - currentAge));
-
-  const remainingDays = remainingYears * 365;
-  const sleepDays   = remainingDays * (8/24);
-  const workDays    = workYears * 365 * (8/24);
-  const screenDays  = remainingDays * (3/24);
-  const otherDays   = Math.max(0, remainingDays - sleepDays - workDays - screenDays);
-
-  const cats = [
-    { name:'Sleep',        days:sleepDays,  color:'#B9C4E8' },
-    { name:'Work',         days:workDays,   color:'#E8946E' },
-    { name:'Screens',      days:screenDays, color:'#B78CE8' },
-    { name:'Everything else', days:otherDays, color:'#E8B75E' },
+  var BUILTIN_HABITS = [
+    { id:'sleep',     name:'Sleep',         cat:'recovery',   unit:'hours',   r:14, anchor:true, icon:'sleep', builtin:true },
+    { id:'meditate',  name:'Meditation',    cat:'mind',       unit:'minutes', r:14, anchor:true, icon:'meditate', builtin:true },
+    { id:'cold',      name:'Cold shower',   cat:'body',       unit:'minutes', r:12, icon:'cold', builtin:true },
+    { id:'sun',       name:'Sunlight',      cat:'body',       unit:'minutes', r:12, icon:'sun', builtin:true },
+    { id:'earth',     name:'Earthing',      cat:'body',       unit:'minutes', r:12, icon:'earth', builtin:true },
+    { id:'walk',      name:'Walk',          cat:'movement',   unit:'minutes', r:12, icon:'walk', builtin:true },
+    { id:'workout',   name:'Workout',       cat:'movement',   unit:'minutes', r:12, icon:'workout', builtin:true },
+    { id:'food',      name:'Clean food',    cat:'fuel',       unit:null,      r:12, icon:'food', builtin:true },
+    { id:'social',    name:'Social time',   cat:'connection', unit:'minutes', r:12, icon:'social', builtin:true }
   ];
 
-  const bar = document.getElementById('divideBar');
-  const legend = document.getElementById('divideLegend');
-  if(remainingDays <= 0){ bar.innerHTML=''; legend.innerHTML=''; return; }
+  var CUSTOM_KEY = 'guardian-nebula-custom-habits-v1';
+  function loadLocalCustomHabits(){
+    try{ var raw = window.localStorage.getItem(CUSTOM_KEY); return raw ? JSON.parse(raw) : []; }
+    catch(e){ return []; }
+  }
+  function saveLocalCustomHabits(list){
+    try{ window.localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); }catch(e){}
+  }
+  var customHabits = loadLocalCustomHabits();
 
-  bar.innerHTML = cats.map(c=>{
-    const pct = (c.days/remainingDays)*100;
-    return `<div class="stack-seg" style="width:${pct}%;background:${c.color};" title="${c.name}: ${Math.round(pct)}%"></div>`;
-  }).join('');
+  var HABITS = [];
+  var HABIT_BY_ID = {};
+  var EDGES = [];
 
-  legend.innerHTML = cats.map(c=>{
-    const pct = Math.round((c.days/remainingDays)*100);
-    const years = (c.days/365).toFixed(1);
-    return `<div class="divide-item"><i style="background:${c.color}"></i><div><div class="dname">${c.name}</div><div class="dval">${pct}% · ~${years} yrs</div></div></div>`;
-  }).join('');
-}
-document.getElementById('birthYear').addEventListener('input', renderLifeGraph);
-document.getElementById('lifeExpectancy').addEventListener('input', renderLifeGraph);
-
-/* ============================================================
-   AUTH  (talks directly to Supabase's REST/Auth endpoints —
-   no SDK needed. Falls back to demo mode if unconfigured.)
-   ============================================================ */
-function toggleAuthMode(){
-  appState.authMode = appState.authMode === 'signin' ? 'signup' : 'signin';
-  const isSignup = appState.authMode === 'signup';
-  document.getElementById('loginTitle').textContent = isSignup ? 'Create your sky' : 'Welcome back';
-  document.getElementById('loginSub').textContent = isSignup ? 'A minute to set up, then you\'re in.' : 'Sign in to pick up your sky where you left it.';
-  document.getElementById('loginSubmit').textContent = isSignup ? 'Create account' : 'Sign in';
-  document.getElementById('loginToggle').innerHTML = isSignup
-    ? `Already have an account? <button onclick="toggleAuthMode()">Sign in</button>`
-    : `New here? <button onclick="toggleAuthMode()">Create an account</button>`;
-}
-
-function showLoginStatus(msg, ok){
-  const el = document.getElementById('loginStatus');
-  el.textContent = msg;
-  el.className = 'login-status show ' + (ok ? 'ok':'err');
-}
-
-async function handleAuth(){
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  if(!email || !password){ showLoginStatus('Enter an email and password.', false); return; }
-
-  if(!appState.supabase.configured){
-    showLoginStatus('No Supabase project connected — use "continue in demo mode" below, or add your project via the gear icon.', false);
-    return;
+  function slugify(name){
+    var base = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+    var id = base || 'practice';
+    var n = 1;
+    while(HABIT_BY_ID[id] || customHabits.some(function(c){return c.id===id && id!==base;})){
+      id = base+'-'+(++n);
+    }
+    return id;
   }
 
-  const grantPath = appState.authMode === 'signup' ? 'signup' : 'token?grant_type=password';
-  try{
-    const res = await fetch(`${appState.supabase.url}/auth/v1/${grantPath}`, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'apikey': appState.supabase.key },
-      body: JSON.stringify({ email, password })
+  function computeLayout(list){
+    var anchors = list.filter(function(h){return h.anchor;});
+    var orbit = list.filter(function(h){return !h.anchor;});
+    var cx=400, cy=260;
+
+    var aSpacing = 90;
+    var aStartY = cy - ((anchors.length-1)*aSpacing)/2;
+    anchors.forEach(function(h,i){ h.x = cx; h.y = aStartY + i*aSpacing; });
+
+    var n = Math.max(orbit.length,1);
+    var radius = Math.min(150 + Math.max(0, orbit.length-8)*6, 210);
+    orbit.forEach(function(h,i){
+      var angle = (2*Math.PI*i/n) - Math.PI/2;
+      h.x = cx + radius*Math.cos(angle);
+      h.y = cy + radius*Math.sin(angle)*0.82;
     });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.error_description || data.msg || 'Authentication failed.');
-    appState.session = { access_token: data.access_token || null, email };
-    showLoginStatus('Signed in.', true);
-    setTimeout(()=>goTo('dashboard'), 400);
-  }catch(e){
-    showLoginStatus(e.message, false);
   }
-}
 
-function enterDemo(){
-  appState.session = { access_token:null, email:'demo@guardian-nebula.local' };
-  goTo('dashboard');
-}
-function signOut(){
-  appState.session = null;
-  goTo('login');
-}
-
-/* ============================================================
-   SUPABASE CONFIG MODAL
-   ============================================================ */
-function openModal(id){ document.getElementById(id).classList.add('show'); }
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
-
-function saveSupabaseConfig(){
-  const url = document.getElementById('sbUrl').value.trim().replace(/\/$/,'');
-  const key = document.getElementById('sbKey').value.trim();
-  const status = document.getElementById('sbStatus');
-  if(!url || !key){
-    appState.supabase = { url:'', key:'', configured:false };
-    status.textContent = 'Not connected — running in demo mode.';
-    status.style.color = 'var(--ink-dim)';
-    return;
+  function computeEdges(list){
+    var anchors = list.filter(function(h){return h.anchor;});
+    var orbit = list.filter(function(h){return !h.anchor;});
+    var edges = [];
+    orbit.forEach(function(h){
+      anchors.forEach(function(a){ edges.push([h.id, a.id]); });
+    });
+    for(var i=0;i<anchors.length-1;i++) edges.push([anchors[i].id, anchors[i+1].id]);
+    return edges;
   }
-  appState.supabase = { url, key, configured:true };
-  status.textContent = `Connected to ${url.replace('https://','')}. Sign in or create an account to sync.`;
-  status.style.color = '#B4D08C';
-  closeModal('supabaseModal');
-}
 
-/* ============================================================
-   INTRO — mini star row
-   ============================================================ */
-(function renderIntroStars(){
-  const el = document.getElementById('introStars');
-  el.innerHTML = STARS.map((s,i)=>`
-    <div class="nine-item">
-      <svg viewBox="-14 -14 28 28" style="animation-duration:${(6.5+(i%4)*0.9).toFixed(1)}s;animation-delay:-${(i*0.35).toFixed(2)}s;">
-        <g class="icon-shape" style="fill:${s.color};stroke:${s.color};">${iconMarkup(s.icon)}</g>
-      </svg>
-      <span class="n-label">${s.label}</span>
-    </div>
-  `).join('');
+  function rebuildHabits(){
+    HABITS = BUILTIN_HABITS.concat(customHabits);
+    HABIT_BY_ID = {};
+    HABITS.forEach(function(h){ HABIT_BY_ID[h.id] = h; });
+    computeLayout(HABITS);
+    EDGES = computeEdges(HABITS);
+  }
+  rebuildHabits();
+
+  function addCustomHabit(data){
+    var habit = {
+      id: slugify(data.name),
+      name: data.name,
+      cat: data.cat,
+      unit: data.unit || null,
+      r: 12,
+      anchor: false,
+      icon: data.icon || 'spark',
+      builtin: false
+    };
+    customHabits.push(habit);
+    saveLocalCustomHabits(customHabits);
+    if(sb && currentUser){
+      sb.from('nebula_custom_habits').upsert({
+        user_id: currentUser.id, habit_id: habit.id, name: habit.name,
+        category: habit.cat, unit: habit.unit, icon: habit.icon
+      }, { onConflict:'user_id,habit_id' }).then(function(res){
+        if(res.error) console.warn('cloud custom-habit save failed:', res.error.message);
+      });
+    }
+    rebuildHabits();
+  }
+
+  function removeCustomHabit(habitId){
+    customHabits = customHabits.filter(function(h){ return h.id !== habitId; });
+    saveLocalCustomHabits(customHabits);
+    if(sb && currentUser){
+      sb.from('nebula_custom_habits').delete().eq('user_id', currentUser.id).eq('habit_id', habitId).then(function(res){
+        if(res.error) console.warn('cloud custom-habit delete failed:', res.error.message);
+      });
+    }
+    rebuildHabits();
+  }
+
+  var DEVICE_PROVIDERS = [
+    { id:'fitbit', name:'Fitbit', blurb:'Steps, sleep stages, heart rate.' },
+    { id:'googlefit', name:'Google Fit', blurb:'Android and Wear OS activity data.' },
+    { id:'applehealth', name:'Apple Health', blurb:'iPhone and Apple Watch, via the Health app export.' },
+    { id:'oura', name:'Oura', blurb:'Sleep, readiness, and body temperature.' },
+    { id:'garmin', name:'Garmin', blurb:'Workouts, steps, and sleep from Garmin devices.' }
+  ];
+
+  /* ---------------- icon glyphs (paths only, colored via currentColor) ---------------- */
+  var ICON_PATHS = {
+    sleep:'M-6,-8 A8,8 0 1 0 6,7 A6,6 0 1 1 -6,-8 Z',
+    meditate:'M0,-9 C2,-5 2,-2 0,0 C-2,-2 -2,-5 0,-9 Z M-7,3 C-4,-1 4,-1 7,3 C4,7 -4,7 -7,3 Z',
+    cold:'M0,-9 C4,-3 7,1 7,4.5 A7,7 0 1 1 -7,4.5 C-7,1 -4,-3 0,-9 Z',
+    sun:'M0,-4.5 A4.5,4.5 0 1 0 0,4.5 A4.5,4.5 0 1 0 0,-4.5 Z M0,-10 L0,-7.5 M0,10 L0,7.5 M-10,0 L-7.5,0 M10,0 L7.5,0 M-7,-7 L-5.3,-5.3 M7,7 L5.3,5.3 M7,-7 L5.3,-5.3 M-7,7 L-5.3,5.3',
+    earth:'M0,8 L0,-2 M0,-2 C-2,-6 -6,-7 -9,-6 C-8,-2 -4,0 0,-2 M0,-2 C2,-6 6,-7 9,-6 C8,-2 4,0 0,-2 M-5,8 L5,8',
+    walk:'M-3,-9 A2.6,2.6 0 1 0 -3,-3.8 A2.6,2.6 0 1 0 -3,-9 Z M-3,-3 C-5,0 -6,3 -4,8 L-1,8 L-2,2 L1,6 L4,8 L2,8 L-1,3',
+    workout:'M-9,0 L9,0 M-9,-4 L-9,4 M9,-4 L9,4 M-13,-2.5 L-13,2.5 M13,-2.5 L13,2.5',
+    food:'M0,-7 C-1.5,-9 -4,-9 -4,-6.5 C-4,-8 -1,-8 0,-7 Z M0,-5 C5,-5 8,0 6,5 C4,9 -4,9 -6,5 C-8,0 -5,-5 0,-5 Z',
+    social:'M-4,-2 A3.4,3.4 0 1 0 -4,-8.8 A3.4,3.4 0 1 0 -4,-2 Z M4,-2 A3.4,3.4 0 1 0 4,-8.8 A3.4,3.4 0 1 0 4,-2 Z M-9,8 C-9,2 -1,2 -1,8 M1,8 C1,2 9,2 9,8',
+    spark:'M0,-10 L2.2,-2.2 L10,0 L2.2,2.2 L0,10 L-2.2,2.2 L-10,0 L-2.2,-2.2 Z'
+  };
+
+  var svgNS = "http://www.w3.org/2000/svg";
+  function buildIconDefs(){
+    var defs = document.getElementById('iconDefs');
+    Object.keys(ICON_PATHS).forEach(function(key){
+      var sym = document.createElementNS(svgNS,'symbol');
+      sym.setAttribute('id','icon-'+key);
+      sym.setAttribute('viewBox','-13 -13 26 26');
+      var path = document.createElementNS(svgNS,'path');
+      path.setAttribute('d', ICON_PATHS[key]);
+      path.setAttribute('stroke','currentColor');
+      path.setAttribute('stroke-width','1.6');
+      path.setAttribute('stroke-linecap','round');
+      path.setAttribute('stroke-linejoin','round');
+      path.setAttribute('fill', key==='sun' || key==='sleep' || key==='food' || key==='spark' ? 'currentColor' : 'none');
+      path.setAttribute('fill-opacity', key==='sun' ? '0.15' : (key==='sleep' || key==='food' ? '0.9' : (key==='spark' ? '0.85' : '0')));
+      sym.appendChild(path);
+      defs.appendChild(sym);
+    });
+  }
+
+  /* ---------------- local storage fallback ---------------- */
+  var STORAGE_KEY = 'guardian-nebula-logs-v1';
+  var PROFILE_KEY = 'guardian-nebula-profile-v1';
+  var NOTES_KEY = 'guardian-nebula-notes-v1';
+
+  function loadLocalLogs(){
+    try{ var raw = window.localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : {}; }
+    catch(e){ return {}; }
+  }
+  function saveLocalLogs(logs){
+    try{ window.localStorage.setItem(STORAGE_KEY, JSON.stringify(logs)); }catch(e){}
+  }
+  function loadLocalProfile(){
+    try{ var raw = window.localStorage.getItem(PROFILE_KEY); return raw ? JSON.parse(raw) : {}; }
+    catch(e){ return {}; }
+  }
+  function saveLocalProfile(p){
+    try{ window.localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); }catch(e){}
+  }
+  function loadLocalNotes(){
+    try{ var raw = window.localStorage.getItem(NOTES_KEY); return raw ? JSON.parse(raw) : {}; }
+    catch(e){ return {}; }
+  }
+  function saveLocalNotes(n){
+    try{ window.localStorage.setItem(NOTES_KEY, JSON.stringify(n)); }catch(e){}
+  }
+
+  var LOGS = loadLocalLogs();      // { 'YYYY-MM-DD': { habitId: {done, value} } }
+  var PROFILE = loadLocalProfile(); // { birth_year, life_expectancy_years, reminder_time, reminders_enabled }
+  var NOTES = loadLocalNotes();    // { 'YYYY-MM-DD': 'text' }
+
+  function noteFor(dateStr){ return NOTES[dateStr] || ''; }
+  function setNote(dateStr, text){
+    if(text){ NOTES[dateStr] = text; } else { delete NOTES[dateStr]; }
+    saveLocalNotes(NOTES);
+    if(sb && currentUser){
+      if(text){
+        sb.from('nebula_day_notes').upsert({
+          user_id: currentUser.id, log_date: dateStr, note: text
+        }, { onConflict:'user_id,log_date' }).then(function(res){
+          if(res.error) console.warn('cloud note save failed:', res.error.message);
+        });
+      } else {
+        sb.from('nebula_day_notes').delete().eq('user_id', currentUser.id).eq('log_date', dateStr).then(function(){});
+      }
+    }
+  }
+
+  /* ---------------- date helpers ---------------- */
+  function pad(n){ return n < 10 ? '0'+n : ''+n; }
+  function fmt(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function today(){ return fmt(new Date()); }
+  function addDays(dateStr, delta){
+    var d = new Date(dateStr+'T00:00:00');
+    d.setDate(d.getDate()+delta);
+    return fmt(d);
+  }
+  function dayLabel(dateStr){
+    var d = new Date(dateStr+'T00:00:00');
+    return ['S','M','T','W','T','F','S'][d.getDay()];
+  }
+  function monthLabel(y,m){ return new Date(y,m,1).toLocaleString('en-US',{month:'short'}); }
+
+  function entry(dateStr, habitId){
+    return (LOGS[dateStr] && LOGS[dateStr][habitId]) || { done:false, value:null };
+  }
+
+  function setEntry(dateStr, habitId, val){
+    if(!LOGS[dateStr]) LOGS[dateStr] = {};
+    LOGS[dateStr][habitId] = val;
+    saveLocalLogs(LOGS);
+    if(sb && currentUser){
+      sb.from('nebula_habit_logs').upsert({
+        user_id: currentUser.id, log_date: dateStr, habit_id: habitId,
+        done: !!val.done, value: (val.value===undefined?null:val.value)
+      }, { onConflict:'user_id,log_date,habit_id' }).then(function(res){
+        if(res.error) console.warn('cloud save failed, kept locally:', res.error.message);
+      });
+    }
+  }
+
+  function streakFor(habitId, fromDate){
+    var count = 0, d = fromDate || today();
+    while(true){
+      var e = entry(d, habitId);
+      if(e.done){ count++; d = addDays(d,-1); } else break;
+      if(count > 3650) break;
+    }
+    return count;
+  }
+  function firstLogDate(){
+    var keys = Object.keys(LOGS).sort();
+    return keys.length ? keys[0] : null;
+  }
+
+  /* ---------------- cloud load ---------------- */
+  function loadCloudData(){
+    if(!sb || !currentUser) return Promise.resolve();
+    var logsP = sb.from('nebula_habit_logs').select('*').eq('user_id', currentUser.id);
+    var profP = sb.from('nebula_profiles').select('*').eq('user_id', currentUser.id).maybeSingle();
+    var customP = sb.from('nebula_custom_habits').select('*').eq('user_id', currentUser.id);
+    var notesP = sb.from('nebula_day_notes').select('*').eq('user_id', currentUser.id);
+    return Promise.all([logsP, profP, customP, notesP]).then(function(results){
+      var logsRes = results[0], profRes = results[1], customRes = results[2], notesRes = results[3];
+      if(!logsRes.error && logsRes.data){
+        var merged = {};
+        logsRes.data.forEach(function(row){
+          if(!merged[row.log_date]) merged[row.log_date] = {};
+          merged[row.log_date][row.habit_id] = { done: row.done, value: row.value };
+        });
+        LOGS = merged;
+      }
+      if(!profRes.error && profRes.data){
+        PROFILE = {
+          birth_year: profRes.data.birth_year,
+          life_expectancy_years: profRes.data.life_expectancy_years,
+          reminder_time: profRes.data.reminder_time,
+          reminders_enabled: profRes.data.reminders_enabled
+        };
+      }
+      if(!customRes.error && customRes.data){
+        customHabits = customRes.data.map(function(row){
+          return { id: row.habit_id, name: row.name, cat: row.category, unit: row.unit, r:12, anchor:false, icon: row.icon || 'spark', builtin:false };
+        });
+        saveLocalCustomHabits(customHabits);
+        rebuildHabits();
+      }
+      if(!notesRes.error && notesRes.data){
+        var n = {};
+        notesRes.data.forEach(function(row){ n[row.log_date] = row.note; });
+        NOTES = n;
+        saveLocalNotes(NOTES);
+      }
+    }).catch(function(err){ console.warn('cloud load failed, using local cache:', err); });
+  }
+
+  function saveProfile(p){
+    PROFILE = Object.assign({}, PROFILE, p);
+    saveLocalProfile(PROFILE);
+    if(sb && currentUser){
+      sb.from('nebula_profiles').upsert({
+        user_id: currentUser.id,
+        birth_year: PROFILE.birth_year,
+        life_expectancy_years: PROFILE.life_expectancy_years,
+        reminder_time: PROFILE.reminder_time,
+        reminders_enabled: PROFILE.reminders_enabled
+      }, { onConflict:'user_id' }).then(function(res){
+        if(res.error) console.warn('cloud profile save failed:', res.error.message);
+      });
+    }
+  }
+
+  /* ================= AUTH ================= */
+  var authOverlay = document.getElementById('authOverlay');
+  var authMode = 'signin';
+
+  function showAuthOverlay(){ authOverlay.classList.remove('hidden'); }
+  function hideAuthOverlay(){ authOverlay.classList.add('hidden'); }
+
+  function setAuthMode(mode){
+    authMode = mode;
+    document.querySelectorAll('.auth-tabs button').forEach(function(b){
+      b.classList.toggle('active', b.dataset.mode===mode);
+    });
+    document.getElementById('authTitle').textContent = mode==='signin' ? 'Welcome back' : 'Create your account';
+    document.getElementById('authSub').textContent = mode==='signin'
+      ? 'Sign in to sync your constellation across devices.'
+      : 'A few seconds, then your sky follows you anywhere.';
+    document.getElementById('authSubmitBtn').textContent = mode==='signin' ? 'Sign in' : 'Create account';
+    document.getElementById('authMsg').textContent = '';
+  }
+  document.querySelectorAll('.auth-tabs button').forEach(function(b){
+    b.addEventListener('click', function(){ setAuthMode(b.dataset.mode); });
+  });
+
+  document.getElementById('authSubmitBtn').addEventListener('click', function(){
+    var email = document.getElementById('authEmail').value.trim();
+    var password = document.getElementById('authPassword').value;
+    var msg = document.getElementById('authMsg');
+    msg.className = 'auth-msg'; msg.textContent = '';
+    if(!sb){ msg.className='auth-msg err'; msg.textContent='Cloud sync is not configured on this deployment.'; return; }
+    if(!email || !password){ msg.className='auth-msg err'; msg.textContent='Enter an email and password.'; return; }
+
+    var action = authMode==='signin'
+      ? sb.auth.signInWithPassword({ email:email, password:password })
+      : sb.auth.signUp({ email:email, password:password });
+
+    action.then(function(res){
+      if(res.error){ msg.className='auth-msg err'; msg.textContent = res.error.message; return; }
+      if(authMode==='signup' && res.data && res.data.user && !res.data.session){
+        msg.className='auth-msg ok'; msg.textContent='Check your inbox to confirm your email, then sign in.';
+        setAuthMode('signin');
+        return;
+      }
+      onSignedIn(res.data.session ? res.data.session.user : res.data.user);
+    });
+  });
+
+  document.getElementById('authGoogleBtn').addEventListener('click', function(){
+    var msg = document.getElementById('authMsg');
+    if(!sb){ msg.className='auth-msg err'; msg.textContent='Cloud sync is not configured on this deployment.'; return; }
+    sb.auth.signInWithOAuth({ provider:'google' });
+  });
+
+  document.getElementById('authSkipBtn').addEventListener('click', function(){
+    hideAuthOverlay();
+    boot();
+  });
+
+  function onSignedIn(user){
+    currentUser = user;
+    hideAuthOverlay();
+    loadCloudData().then(boot);
+    renderAccountChip();
+  }
+
+  function renderAccountChip(){
+    var chip = document.getElementById('accountChip');
+    if(currentUser){
+      chip.innerHTML = '<span class="sync-pill cloud">Synced</span> <b>'+ (currentUser.email||'Account') +'</b> <button id="signOutBtn">Sign out</button>';
+      var btn = document.getElementById('signOutBtn');
+      if(btn) btn.addEventListener('click', function(){
+        sb.auth.signOut().then(function(){ window.location.reload(); });
+      });
+    } else if(sb){
+      chip.innerHTML = '<span class="sync-pill local">This device only</span> <button id="signInPromptBtn">Sign in</button>';
+      var btn2 = document.getElementById('signInPromptBtn');
+      if(btn2) btn2.addEventListener('click', showAuthOverlay);
+    } else {
+      chip.innerHTML = '<span class="sync-pill local">This device only</span>';
+    }
+    document.getElementById('storageModeNote').textContent = currentUser
+      ? 'Guardian Nebula — synced to your account.'
+      : 'Guardian Nebula — data stays on this device.';
+  }
+
+  function initAuth(){
+    if(!sb){
+      document.getElementById('authConfigWarning').style.display = 'block';
+      renderAccountChip();
+      return Promise.resolve(false);
+    }
+    return sb.auth.getSession().then(function(res){
+      var session = res.data && res.data.session;
+      if(session && session.user){
+        currentUser = session.user;
+        renderAccountChip();
+        return loadCloudData().then(function(){ boot(); return true; });
+      } else {
+        renderAccountChip();
+        showAuthOverlay();
+        return false;
+      }
+    });
+  }
+
+  /* ---------------- constellation render ---------------- */
+  var edgesLayer = document.getElementById('edgesLayer');
+  var starsLayer = document.getElementById('starsLayer');
+
+  function renderConstellation(){
+    edgesLayer.innerHTML = '';
+    starsLayer.innerHTML = '';
+    var t = today();
+
+    EDGES.forEach(function(pair){
+      var a = HABIT_BY_ID[pair[0]], b = HABIT_BY_ID[pair[1]];
+      var lit = entry(t,a.id).done && entry(t,b.id).done;
+      var line = document.createElementNS(svgNS,'line');
+      line.setAttribute('x1',a.x); line.setAttribute('y1',a.y);
+      line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
+      line.setAttribute('class','edge'+(lit?' lit':''));
+      edgesLayer.appendChild(line);
+    });
+
+    HABITS.forEach(function(h){
+      var e = entry(t,h.id);
+      var streak = streakFor(h.id);
+      var color = CATEGORIES[h.cat].color;
+
+      var g = document.createElementNS(svgNS,'g');
+      g.setAttribute('class','star-btn'+(e.done?' done':' dim')+(streak>=7?' streak-hot':''));
+      g.setAttribute('tabindex','0');
+      g.setAttribute('role','button');
+      g.setAttribute('aria-label', h.name + (e.done?', logged today':', not logged today'));
+      g.dataset.habit = h.id;
+
+      if(streak>=7){
+        var ring = document.createElementNS(svgNS,'circle');
+        ring.setAttribute('cx',h.x); ring.setAttribute('cy',h.y);
+        ring.setAttribute('r', h.r+9);
+        ring.setAttribute('class','star-ring');
+        ring.setAttribute('stroke', '#F0B429');
+        ring.setAttribute('stroke-width','1.4');
+        ring.setAttribute('opacity','0.6');
+        g.appendChild(ring);
+      }
+
+      var core = document.createElementNS(svgNS,'circle');
+      core.setAttribute('cx',h.x); core.setAttribute('cy',h.y);
+      core.setAttribute('r', h.r + 6);
+      core.setAttribute('fill', e.done ? color : 'var(--dim-star)');
+      core.setAttribute('opacity', e.done ? '0.16' : '0.1');
+      core.setAttribute('class','star-core');
+      g.appendChild(core);
+
+      var use = document.createElementNS(svgNS,'use');
+      use.setAttributeNS('http://www.w3.org/1999/xlink','href','#icon-'+h.icon);
+      use.setAttribute('href','#icon-'+h.icon);
+      use.setAttribute('x', h.x-h.r); use.setAttribute('y', h.y-h.r);
+      use.setAttribute('width', h.r*2); use.setAttribute('height', h.r*2);
+      use.setAttribute('class','star-icon icon-'+h.icon);
+      use.setAttribute('style','color:'+(e.done?color:'#5E6786'));
+      g.appendChild(use);
+
+      var label = document.createElementNS(svgNS,'text');
+      label.setAttribute('x',h.x);
+      label.setAttribute('y', h.y + h.r + 20);
+      label.setAttribute('text-anchor','middle');
+      label.setAttribute('class','star-label');
+      label.textContent = h.name;
+      g.appendChild(label);
+
+      g.addEventListener('click', function(){ openPopover(h.id, g); });
+      g.addEventListener('keydown', function(evt){
+        if(evt.key==='Enter' || evt.key===' '){ evt.preventDefault(); openPopover(h.id, g); }
+      });
+
+      starsLayer.appendChild(g);
+    });
+
+    updateTodayStrip();
+  }
+
+  function updateTodayStrip(){
+    var t = today();
+    var doneCount = HABITS.reduce(function(n,h){ return n + (entry(t,h.id).done?1:0); },0);
+    document.getElementById('todayScore').textContent = doneCount+'/'+HABITS.length;
+    document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric'});
+  }
+
+  /* ---------------- popover ---------------- */
+  var popover = document.getElementById('popover');
+  var popCat = document.getElementById('popCat');
+  var popName = document.getElementById('popName');
+  var popToggle = document.getElementById('popToggle');
+  var popNumRow = document.getElementById('popNumRow');
+  var popNumLabel = document.getElementById('popNumLabel');
+  var popNumInput = document.getElementById('popNumInput');
+  var popStreak = document.getElementById('popStreak');
+  var activeHabitId = null;
+
+  function openPopover(habitId, starEl){
+    activeHabitId = habitId;
+    var h = HABIT_BY_ID[habitId];
+    var e = entry(today(), habitId);
+
+    popCat.textContent = CATEGORIES[h.cat].label;
+    popName.textContent = h.name;
+    popToggle.className = 'toggle' + (e.done ? ' on' : '');
+
+    if(h.unit){
+      popNumRow.style.display = 'block';
+      popNumLabel.textContent = h.unit.charAt(0).toUpperCase()+h.unit.slice(1);
+      popNumInput.value = e.value != null ? e.value : '';
+    } else {
+      popNumRow.style.display = 'none';
+    }
+
+    var streak = streakFor(habitId);
+    popStreak.textContent = streak > 0
+      ? streak + '-day streak' + (streak>=7 ? ' — burning bright' : '')
+      : 'No active streak yet';
+
+    var wrapRect = document.querySelector('.constellation-wrap').getBoundingClientRect();
+    var starRect = starEl.getBoundingClientRect();
+    var top = starRect.top - wrapRect.top + starRect.height/2 - 10;
+    var left = starRect.left - wrapRect.left + starRect.width/2 - 10;
+    left = Math.min(Math.max(left, 10), wrapRect.width - 240);
+    top = Math.min(Math.max(top, 10), wrapRect.height - 200);
+    popover.style.top = top+'px';
+    popover.style.left = left+'px';
+    popover.classList.add('open');
+  }
+
+  function closePopover(){ popover.classList.remove('open'); activeHabitId = null; }
+  document.getElementById('popoverClose').addEventListener('click', closePopover);
+  document.addEventListener('click', function(evt){
+    if(popover.classList.contains('open') &&
+       !popover.contains(evt.target) &&
+       !evt.target.closest('.star-btn')){
+      closePopover();
+    }
+  });
+
+  popToggle.addEventListener('click', function(){
+    if(!activeHabitId) return;
+    var e = entry(today(), activeHabitId);
+    var newDone = !e.done;
+    setEntry(today(), activeHabitId, { done:newDone, value: e.value });
+    popToggle.className = 'toggle' + (newDone ? ' on' : '');
+    renderConstellation();
+    renderView();
+  });
+
+  popNumInput.addEventListener('change', function(){
+    if(!activeHabitId) return;
+    var e = entry(today(), activeHabitId);
+    var v = popNumInput.value === '' ? null : Number(popNumInput.value);
+    setEntry(today(), activeHabitId, { done:e.done, value:v });
+    renderConstellation();
+    renderView();
+  });
+
+  /* ---------------- nav ---------------- */
+  document.querySelectorAll('nav button[data-scroll]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelector(btn.dataset.scroll).scrollIntoView({behavior:'smooth'});
+    });
+  });
+
+  /* ---------------- manual entry form ---------------- */
+  var entryHabitSelect = document.getElementById('entryHabit');
+  function populateEntrySelect(){
+    var prev = entryHabitSelect.value;
+    entryHabitSelect.innerHTML = '';
+    HABITS.forEach(function(h){
+      var opt = document.createElement('option');
+      opt.value = h.id; opt.textContent = h.name;
+      entryHabitSelect.appendChild(opt);
+    });
+    if(HABIT_BY_ID[prev]) entryHabitSelect.value = prev;
+    syncEntryValueField();
+  }
+  document.getElementById('entryDate').value = today();
+
+  function syncEntryValueField(){
+    var h = HABIT_BY_ID[entryHabitSelect.value] || HABITS[0];
+    var field = document.getElementById('entryValueField');
+    var label = document.getElementById('entryValueLabel');
+    if(h.unit){
+      field.style.display = '';
+      label.textContent = h.unit.charAt(0).toUpperCase()+h.unit.slice(1);
+    } else {
+      field.style.display = 'none';
+    }
+  }
+  entryHabitSelect.addEventListener('change', syncEntryValueField);
+
+  document.getElementById('entryForm').addEventListener('submit', function(evt){
+    evt.preventDefault();
+    var date = document.getElementById('entryDate').value || today();
+    var habitId = HABIT_BY_ID[entryHabitSelect.value] ? entryHabitSelect.value : HABITS[0].id;
+    var done = document.getElementById('entryDone').checked;
+    var valRaw = document.getElementById('entryValue').value;
+    var value = valRaw === '' ? null : Number(valRaw);
+    setEntry(date, habitId, { done:done, value:value });
+    document.getElementById('entryStatus').textContent = 'Saved '+HABIT_BY_ID[habitId].name+' for '+date+'.';
+    renderConstellation();
+    renderView();
+  });
+
+  /* ---------------- add / manage custom practices ---------------- */
+  var addPracticeForm = document.getElementById('addPracticeForm');
+  var addIconSelect = document.getElementById('addPracticeIcon');
+  Object.keys(ICON_PATHS).forEach(function(key){
+    var opt = document.createElement('option');
+    opt.value = key; opt.textContent = key.charAt(0).toUpperCase()+key.slice(1);
+    addIconSelect.appendChild(opt);
+  });
+  var addCatSelect = document.getElementById('addPracticeCat');
+  Object.keys(CATEGORIES).forEach(function(key){
+    var opt = document.createElement('option');
+    opt.value = key; opt.textContent = CATEGORIES[key].label;
+    addCatSelect.appendChild(opt);
+  });
+
+  addPracticeForm.addEventListener('submit', function(evt){
+    evt.preventDefault();
+    var name = document.getElementById('addPracticeName').value.trim();
+    if(!name) return;
+    addCustomHabit({
+      name: name,
+      cat: addCatSelect.value,
+      unit: document.getElementById('addPracticeUnit').value.trim(),
+      icon: addIconSelect.value
+    });
+    document.getElementById('addPracticeName').value = '';
+    document.getElementById('addPracticeUnit').value = '';
+    renderConstellation();
+    renderView();
+    populateEntrySelect();
+    renderManageList();
+  });
+
+  function renderManageList(){
+    var wrap = document.getElementById('manageList');
+    wrap.innerHTML = '';
+    HABITS.forEach(function(h){
+      var row = el('div','manage-row');
+      row.appendChild(el('div','manage-name','<span class="dot" style="background:'+CATEGORIES[h.cat].color+'"></span>'+h.name+(h.builtin?' <span class="manage-tag">default</span>':' <span class="manage-tag">custom</span>')));
+      if(!h.builtin){
+        var rmBtn = el('button','btn ghost','Remove');
+        rmBtn.type = 'button';
+        rmBtn.addEventListener('click', function(){
+          if(confirm('Remove "'+h.name+'" and stop tracking it? Past logged data for it stays in your history.')){
+            removeCustomHabit(h.id);
+            renderConstellation();
+            renderView();
+            populateEntrySelect();
+            renderManageList();
+          }
+        });
+        row.appendChild(rmBtn);
+      }
+      wrap.appendChild(row);
+    });
+  }
+
+
+  /* ---------------- dashboard views ---------------- */
+  var tabbar = document.getElementById('tabbar');
+  var viewContent = document.getElementById('viewContent');
+  var currentView = 'daily';
+
+  tabbar.addEventListener('click', function(evt){
+    var btn = evt.target.closest('button[data-view]');
+    if(!btn) return;
+    tabbar.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+    renderView();
+  });
+
+  function el(tag, cls, html){
+    var e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(html !== undefined) e.innerHTML = html;
+    return e;
+  }
+
+  function renderView(){
+    viewContent.innerHTML = '';
+    if(currentView==='daily') renderDaily();
+    else if(currentView==='weekly') renderWeekly();
+    else if(currentView==='monthly') renderMonthly();
+    else if(currentView==='yearly') renderYearly();
+    else renderLife();
+
+    var f = firstLogDate();
+    document.getElementById('firstLogNote').textContent = f ? ('Tracking since '+f) : '';
+  }
+
+  function statCard(k,l){
+    var c = el('div','stat-card');
+    c.appendChild(el('div','k mono',k));
+    c.appendChild(el('div','l',l));
+    return c;
+  }
+
+  function renderDaily(){
+    var t = today(), y = addDays(t,-1);
+    var n = HABITS.length;
+    var doneT = HABITS.reduce(function(n,h){return n+(entry(t,h.id).done?1:0);},0);
+    var doneY = HABITS.reduce(function(n,h){return n+(entry(y,h.id).done?1:0);},0);
+
+    var stats = el('div','stat-row');
+    stats.appendChild(statCard(doneT+'/'+n,'lit today'));
+    stats.appendChild(statCard(doneY+'/'+n,'lit yesterday'));
+    var bestStreak = Math.max.apply(null, HABITS.map(function(h){return streakFor(h.id);}).concat([0]));
+    stats.appendChild(statCard(bestStreak+'d','longest active streak'));
+    viewContent.appendChild(stats);
+
+    viewContent.appendChild(el('div','panel-title','<h3>Today\u2019s practices</h3><span class="n">'+t+'</span>'));
+
+    HABITS.forEach(function(h){
+      var e = entry(t,h.id);
+      var streak = streakFor(h.id);
+      var block = el('div','habit-block');
+      var head = el('div','habit-block-head');
+      head.appendChild(el('div','habit-name','<span class="dot" style="background:'+CATEGORIES[h.cat].color+'"></span>'+h.name));
+      var meta = el('div','habit-meta',
+        '<span>'+(e.done?'Done':'Not yet')+'</span>' +
+        (h.unit && e.value!=null ? '<span><b>'+e.value+'</b> '+h.unit+'</span>' : '') +
+        '<span><b>'+streak+'</b>d streak</span>'
+      );
+      head.appendChild(meta);
+      block.appendChild(head);
+      viewContent.appendChild(block);
+    });
+
+    viewContent.appendChild(el('div','panel-title','<h3 style="margin-top:26px;">Memory</h3><span class="n">a line about today, if you want one</span>'));
+    var noteBlock = el('div','habit-block');
+    var ta = el('textarea',null,'');
+    ta.rows = 3;
+    ta.placeholder = 'What mattered today?';
+    ta.style.cssText = 'width:100%;background:var(--void);border:1px solid var(--hairline);border-radius:8px;color:var(--text);font-family:Inter,sans-serif;font-size:13.5px;padding:10px;resize:vertical;';
+    ta.value = noteFor(t);
+    ta.addEventListener('change', function(){ setNote(t, ta.value.trim()); });
+    noteBlock.appendChild(ta);
+    viewContent.appendChild(noteBlock);
+
+    var pastNotes = Object.keys(NOTES).sort().reverse().filter(function(d){return d!==t;}).slice(0,6);
+    if(pastNotes.length){
+      viewContent.appendChild(el('div','panel-title','<h3 style="margin-top:22px;">Recent memories</h3>'));
+      pastNotes.forEach(function(d){
+        var mb = el('div','habit-block');
+        mb.appendChild(el('div','habit-block-head','<div class="habit-name">'+d+'</div>'));
+        mb.appendChild(el('p',null,NOTES[d]));
+        viewContent.appendChild(mb);
+      });
+    }
+  }
+
+
+  function renderWeekly(){
+    var days = [];
+    for(var i=6;i>=0;i--) days.push(addDays(today(),-i));
+
+    var totalPossible = days.length*HABITS.length;
+    var totalDone = 0;
+    days.forEach(function(d){ HABITS.forEach(function(h){ if(entry(d,h.id).done) totalDone++; }); });
+
+    var stats = el('div','stat-row');
+    stats.appendChild(statCard(Math.round(100*totalDone/totalPossible)+'%','week completion'));
+    stats.appendChild(statCard(totalDone,'practices logged'));
+    viewContent.appendChild(stats);
+
+    viewContent.appendChild(el('div','panel-title','<h3>Last 7 days</h3><span class="n"></span>'));
+
+    HABITS.forEach(function(h){
+      var block = el('div','habit-block');
+      var doneDays = days.filter(function(d){return entry(d,h.id).done;}).length;
+      var head = el('div','habit-block-head');
+      head.appendChild(el('div','habit-name','<span class="dot" style="background:'+CATEGORIES[h.cat].color+'"></span>'+h.name));
+      head.appendChild(el('div','habit-meta','<span><b>'+doneDays+'</b>/7 days</span><span><b>'+streakFor(h.id)+'</b>d streak</span>'));
+      block.appendChild(head);
+
+      var bars = el('div','bars');
+      days.forEach(function(d){
+        var e = entry(d,h.id);
+        var height = e.done ? (h.unit && e.value ? Math.min(100, 20+e.value*2) : 70) : 6;
+        var bar = el('div','bar'+(e.done?' filled':''));
+        bar.style.height = height+'%';
+        bar.style.setProperty('--bar-color', CATEGORIES[h.cat].color);
+        bars.appendChild(bar);
+      });
+      block.appendChild(bars);
+
+      var labels = el('div','bar-labels');
+      days.forEach(function(d){ labels.appendChild(el('span',null,dayLabel(d))); });
+      block.appendChild(labels);
+
+      viewContent.appendChild(block);
+    });
+  }
+
+  function renderMonthly(){
+    var now = new Date();
+    var y = now.getFullYear(), m = now.getMonth();
+    var daysInMonth = new Date(y,m+1,0).getDate();
+    var monthDays = [];
+    for(var d=1; d<=daysInMonth; d++) monthDays.push(y+'-'+pad(m+1)+'-'+pad(d));
+
+    var totalPossible = monthDays.length*HABITS.length;
+    var totalDone = 0;
+    monthDays.forEach(function(d){ HABITS.forEach(function(h){ if(entry(d,h.id).done) totalDone++; }); });
+
+    var stats = el('div','stat-row');
+    stats.appendChild(statCard(Math.round(100*totalDone/totalPossible)+'%','month completion'));
+    stats.appendChild(statCard(totalDone,'practices logged'));
+    var bestStreak = Math.max.apply(null, HABITS.map(function(h){return streakFor(h.id);}).concat([0]));
+    stats.appendChild(statCard(bestStreak+'d','current best streak'));
+    viewContent.appendChild(stats);
+
+    viewContent.appendChild(el('div','panel-title','<h3>'+monthLabel(y,m)+' heatmap</h3><span class="n">by day, all habits</span>'));
+    var heat = el('div','heatmap');
+    monthDays.forEach(function(d){
+      var doneCount = HABITS.reduce(function(n,h){return n+(entry(d,h.id).done?1:0);},0);
+      var alpha = doneCount===0 ? 0 : (0.18 + 0.82*(doneCount/HABITS.length));
+      var cell = el('div','heat-cell', d.slice(-2));
+      if(doneCount>0) cell.style.background = 'rgba(52,199,123,'+alpha.toFixed(2)+')';
+      heat.appendChild(cell);
+    });
+    viewContent.appendChild(heat);
+
+    viewContent.appendChild(el('div','panel-title','<h3 style="margin-top:26px;">Per-practice completion</h3>'));
+    HABITS.forEach(function(h){
+      var doneDays = monthDays.filter(function(d){return entry(d,h.id).done;}).length;
+      var pct = Math.round(100*doneDays/monthDays.length);
+      var block = el('div','habit-block');
+      var head = el('div','habit-block-head');
+      head.appendChild(el('div','habit-name','<span class="dot" style="background:'+CATEGORIES[h.cat].color+'"></span>'+h.name));
+      head.appendChild(el('div','habit-meta','<span><b>'+pct+'%</b> of days</span><span><b>'+doneDays+'</b>/'+monthDays.length+'</span>'));
+      block.appendChild(head);
+      viewContent.appendChild(block);
+    });
+  }
+
+  function renderYearly(){
+    var y = new Date().getFullYear();
+    var monthTotals = [];
+    for(var m=0;m<12;m++){
+      var dim = new Date(y,m+1,0).getDate();
+      var done=0, possible=0;
+      for(var d=1; d<=dim; d++){
+        var ds = y+'-'+pad(m+1)+'-'+pad(d);
+        if(new Date(ds) > new Date()) continue;
+        HABITS.forEach(function(h){ possible++; if(entry(ds,h.id).done) done++; });
+      }
+      monthTotals.push({done:done, possible:possible});
+    }
+    var yearDone = monthTotals.reduce(function(s,x){return s+x.done;},0);
+    var yearPossible = monthTotals.reduce(function(s,x){return s+x.possible;},0);
+
+    var stats = el('div','stat-row');
+    stats.appendChild(statCard(yearDone,'practices logged in '+y));
+    stats.appendChild(statCard(yearPossible? Math.round(100*yearDone/yearPossible)+'%':'0%','year completion'));
+    viewContent.appendChild(stats);
+
+    viewContent.appendChild(el('div','panel-title','<h3>Month by month</h3><span class="n">'+y+'</span>'));
+    var block = el('div','habit-block');
+    var bars = el('div','bars months');
+    monthTotals.forEach(function(mt){
+      var pct = mt.possible ? Math.round(100*mt.done/mt.possible) : 0;
+      var bar = el('div','bar'+(pct>0?' filled':''));
+      bar.style.height = Math.max(pct,3)+'%';
+      bar.style.setProperty('--bar-color', '#34C77B');
+      bar.title = pct+'%';
+      bars.appendChild(bar);
+    });
+    block.appendChild(bars);
+    var labels = el('div','bar-labels');
+    for(var m2=0;m2<12;m2++) labels.appendChild(el('span',null, monthLabel(y,m2).slice(0,1)));
+    block.appendChild(labels);
+    viewContent.appendChild(block);
+
+    viewContent.appendChild(el('div','panel-title','<h3 style="margin-top:26px;">Totals by practice</h3>'));
+    HABITS.forEach(function(h){
+      var count = 0, sum = 0;
+      Object.keys(LOGS).forEach(function(d){
+        if(d.slice(0,4) !== String(y)) return;
+        var e = entry(d,h.id);
+        if(e.done) count++;
+        if(e.value) sum += e.value;
+      });
+      var block2 = el('div','habit-block');
+      var head = el('div','habit-block-head');
+      head.appendChild(el('div','habit-name','<span class="dot" style="background:'+CATEGORIES[h.cat].color+'"></span>'+h.name));
+      var extra = h.unit ? '<span><b>'+sum+'</b> '+h.unit+' total</span>' : '';
+      head.appendChild(el('div','habit-meta','<span><b>'+count+'</b> days</span>'+extra));
+      block2.appendChild(head);
+      viewContent.appendChild(block2);
+    });
+  }
+
+  function renderLife(){
+    var first = firstLogDate();
+    var stats = el('div','stat-row');
+
+    if(!first){
+      stats.appendChild(statCard('0','days tracked'));
+      viewContent.appendChild(stats);
+      viewContent.appendChild(el('div','empty-note','Your life view fills in once you log your first practice. Tap a star above to begin.'));
+      return;
+    }
+
+    var dayCount = Object.keys(LOGS).length;
+    var totalDone = 0;
+    Object.keys(LOGS).forEach(function(d){
+      HABITS.forEach(function(h){ if(entry(d,h.id).done) totalDone++; });
+    });
+    var bestEver = Math.max.apply(null, HABITS.map(function(h){
+      var dates = Object.keys(LOGS).sort();
+      var max=0, cur=0, prev=null;
+      dates.forEach(function(d){
+        var e = entry(d,h.id);
+        if(e.done){
+          if(prev && addDays(prev,1)===d) cur++; else cur=1;
+          max = Math.max(max,cur);
+        } else { cur=0; }
+        prev = d;
+      });
+      return max;
+    }).concat([0]));
+
+    stats.appendChild(statCard(dayCount,'days tracked'));
+    stats.appendChild(statCard(totalDone,'practices logged, ever'));
+    stats.appendChild(statCard(bestEver+'d','longest streak ever'));
+    viewContent.appendChild(stats);
+
+    viewContent.appendChild(el('div','panel-title','<h3>Lifetime totals by practice</h3><span class="n">since '+first+'</span>'));
+    HABITS.forEach(function(h){
+      var count=0, sum=0;
+      Object.keys(LOGS).forEach(function(d){
+        var e = entry(d,h.id);
+        if(e.done) count++;
+        if(e.value) sum += e.value;
+      });
+      var block = el('div','habit-block');
+      var head = el('div','habit-block-head');
+      head.appendChild(el('div','habit-name','<span class="dot" style="background:'+CATEGORIES[h.cat].color+'"></span>'+h.name));
+      var extra = h.unit ? '<span><b>'+sum+'</b> '+h.unit+' total</span>' : '';
+      head.appendChild(el('div','habit-meta','<span><b>'+count+'</b> total days</span>'+extra));
+      block.appendChild(head);
+      viewContent.appendChild(block);
+    });
+  }
+
+  /* ---------------- perspective / life expectancy ---------------- */
+  var lifeExpSelect = document.getElementById('lifeExpectancy');
+  var customField = document.getElementById('customExpectancyField');
+  lifeExpSelect.addEventListener('change', function(){
+    customField.style.display = lifeExpSelect.value==='custom' ? '' : 'none';
+  });
+
+  function renderPerspectiveFromProfile(){
+    if(PROFILE.birth_year){
+      document.getElementById('birthYear').value = PROFILE.birth_year;
+    }
+    if(PROFILE.life_expectancy_years){
+      var known = ['73','80','72','83'];
+      if(known.indexOf(String(PROFILE.life_expectancy_years)) > -1){
+        lifeExpSelect.value = String(PROFILE.life_expectancy_years);
+      } else {
+        lifeExpSelect.value = 'custom';
+        customField.style.display = '';
+        document.getElementById('customExpectancy').value = PROFILE.life_expectancy_years;
+      }
+      computePerspective();
+    }
+  }
+
+  function computePerspective(){
+    var birthYear = Number(document.getElementById('birthYear').value);
+    var expectancy = lifeExpSelect.value==='custom'
+      ? Number(document.getElementById('customExpectancy').value)
+      : Number(lifeExpSelect.value);
+
+    var empty = document.getElementById('perspectiveEmpty');
+    var results = document.getElementById('perspectiveResults');
+
+    if(!birthYear || birthYear < 1900 || birthYear > new Date().getFullYear() || !expectancy){
+      empty.style.display = '';
+      results.classList.remove('show');
+      return;
+    }
+
+    saveProfile({ birth_year: birthYear, life_expectancy_years: expectancy });
+
+    var nowYear = new Date().getFullYear();
+    var age = nowYear - birthYear;
+    var yearsLeft = Math.max(0, expectancy - age);
+    var weeksLeft = Math.round(yearsLeft*52.18);
+    var monthsLeft = Math.round(yearsLeft*12);
+
+    empty.style.display = 'none';
+    results.classList.add('show');
+
+    var statsWrap = document.getElementById('perspectiveStats');
+    statsWrap.innerHTML = '';
+    statsWrap.appendChild(statCard(String(age),'years lived'));
+    statsWrap.appendChild(statCard(String(yearsLeft)+'y','remaining at this average'));
+    statsWrap.appendChild(statCard(monthsLeft.toLocaleString(),'months remaining'));
+    statsWrap.appendChild(statCard(weeksLeft.toLocaleString(),'weeks remaining'));
+
+    var grid = document.getElementById('lifeGrid');
+    grid.innerHTML = '';
+    var totalYears = Math.max(expectancy, age+1);
+    var totalWeeks = Math.round(totalYears*52.18);
+    var weeksLived = Math.round(age*52.18);
+    for(var wk=0; wk<totalWeeks; wk++){
+      var cell = el('div','life-cell');
+      if(wk < weeksLived) cell.classList.add('lived');
+      else if(wk === weeksLived) cell.classList.add('current');
+      grid.appendChild(cell);
+    }
+  }
+
+  document.getElementById('perspectiveCalc').addEventListener('click', computePerspective);
+  document.getElementById('birthYear').addEventListener('change', computePerspective);
+  document.getElementById('customExpectancy').addEventListener('change', computePerspective);
+
+  /* ---------------- device connections ---------------- */
+  var DEVICE_ICON_PATHS = {
+    fitbit:'M0,-8 A2,2 0 1 0 0,-4 A2,2 0 1 0 0,-8 Z M0,-1 A2.4,2.4 0 1 0 0,3.8 A2.4,2.4 0 1 0 0,-1 Z M0,6 A1.6,1.6 0 1 0 0,9.2 A1.6,1.6 0 1 0 0,6 Z',
+    googlefit:'M-8,4 L-2,-6 L2,2 L5,-4 L9,4',
+    applehealth:'M0,7 C-8,1 -9,-6 -3,-7 C0,-7.5 0,-4 0,-4 C0,-4 0,-7.5 3,-7 C9,-6 8,1 0,7 Z',
+    oura:'M0,0 A8,8 0 1 0 0.01,0 Z M0,0 A4,4 0 1 0 0.01,0 Z',
+    garmin:'M0,-9 L7,4 L-7,4 Z'
+  };
+
+  function renderDeviceGrid(){
+    var grid = document.getElementById('deviceGrid');
+    grid.innerHTML = '';
+    DEVICE_PROVIDERS.forEach(function(p){
+      var card = el('div','device-card');
+      var head = el('div','dev-head');
+      var iconSvg = '<svg class="dev-icon" viewBox="-13 -13 26 26" xmlns="http://www.w3.org/2000/svg"><path d="'+DEVICE_ICON_PATHS[p.id]+'" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      head.innerHTML = iconSvg + '<span class="dev-name">'+p.name+'</span>';
+      card.appendChild(head);
+      card.appendChild(el('p',null,p.blurb));
+      card.appendChild(el('div','dev-status','Not connected'));
+      var btn = el('button','btn ghost','Connect');
+      btn.style.marginTop = '4px';
+      btn.addEventListener('click', function(providerName){
+        return function(){
+          alert(providerName+' isn\u2019t wired up yet \u2014 it needs an OAuth integration built server-side. Manual entry works today; ask to have '+providerName+' built next and it can be prioritized.');
+        };
+      }(p.name));
+      card.appendChild(btn);
+      grid.appendChild(card);
+    });
+  }
+
+  /* ---------------- reminders / notifications ---------------- */
+  var REMINDER_NOTIFIED_KEY = 'guardian-nebula-notified-date-v1';
+  var reminderEnableBtn = document.getElementById('reminderEnableBtn');
+  var reminderTimeInput = document.getElementById('reminderTime');
+  var reminderStatus = document.getElementById('reminderStatus');
+
+  function refreshReminderStatus(){
+    if(!('Notification' in window)){
+      reminderStatus.textContent = 'This browser doesn\u2019t support notifications.';
+      reminderEnableBtn.disabled = true;
+      return;
+    }
+    if(Notification.permission==='granted' && PROFILE.reminders_enabled){
+      reminderStatus.textContent = 'Notifications are on for this device, only while this tab is open — set for ' + (PROFILE.reminder_time||'20:00') + '.';
+      reminderEnableBtn.textContent = 'Notifications enabled';
+    } else if(Notification.permission==='denied'){
+      reminderStatus.textContent = 'Notifications are blocked in your browser settings for this site — re-enable them there if you want reminders.';
+    } else {
+      reminderStatus.textContent = 'Notifications need your browser\u2019s permission and only fire while this tab is open on this device \u2014 a static page can\u2019t send background push notifications without a server behind it.';
+    }
+  }
+
+  reminderEnableBtn.addEventListener('click', function(){
+    if(!('Notification' in window)) return;
+    Notification.requestPermission().then(function(perm){
+      if(perm==='granted'){
+        saveProfile({ reminders_enabled:true, reminder_time: reminderTimeInput.value||'20:00' });
+        new Notification('Guardian Nebula', { body:'Reminders are on. I\u2019ll nudge you here if the sky\u2019s still dim by '+ (reminderTimeInput.value||'20:00') +'.' });
+      }
+      refreshReminderStatus();
+    });
+  });
+
+  document.getElementById('reminderSaveBtn').addEventListener('click', function(){
+    saveProfile({ reminder_time: reminderTimeInput.value||'20:00' });
+    refreshReminderStatus();
+  });
+
+  function checkReminderTick(){
+    if(!PROFILE.reminders_enabled || !('Notification' in window) || Notification.permission!=='granted') return;
+    var now = new Date();
+    var hh = pad(now.getHours()), mm = pad(now.getMinutes());
+    var target = (PROFILE.reminder_time||'20:00');
+    var t = today();
+    var alreadyNotified = window.localStorage.getItem(REMINDER_NOTIFIED_KEY) === t;
+    if(hh+':'+mm >= target && !alreadyNotified){
+      var doneCount = HABITS.reduce(function(n,h){ return n + (entry(t,h.id).done?1:0); },0);
+      if(doneCount < HABITS.length){
+        new Notification('Guardian Nebula', { body: doneCount+'/'+HABITS.length+' lit today \u2014 still time to light a few more.' });
+      }
+      window.localStorage.setItem(REMINDER_NOTIFIED_KEY, t);
+    }
+  }
+
+  /* ---------------- PWA install ---------------- */
+  function registerPWA(){
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('sw.js').catch(function(){ /* optional, ignore if sw.js isn't deployed */ });
+    }
+  }
+
+  /* ---------------- boot ---------------- */
+  function boot(){
+    buildIconDefs();
+    populateEntrySelect();
+    renderManageList();
+    renderConstellation();
+    renderView();
+    renderPerspectiveFromProfile();
+    renderDeviceGrid();
+    renderAccountChip();
+    if(PROFILE.reminder_time) reminderTimeInput.value = PROFILE.reminder_time;
+    refreshReminderStatus();
+    setInterval(checkReminderTick, 60000);
+    registerPWA();
+  }
+
+  initAuth().then(function(alreadySignedIn){
+    if(alreadySignedIn) return; // boot() already called inside onSignedIn path via loadCloudData chain
+    if(!sb){ boot(); }
+    // if sb exists but not signed in, boot() runs after the user signs in or clicks "skip"
+  });
+
 })();
-
-/* ============================================================
-   DASHBOARD INIT
-   ============================================================ */
-function renderDashboard(){
-  const now = new Date();
-  document.getElementById('dashDate').textContent = now.toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric'});
-  const hour = now.getHours();
-  document.getElementById('dashGreeting').textContent = hour < 12 ? 'Good morning. Your sky awaits.' : hour < 18 ? 'Good afternoon. Your sky awaits.' : 'Your sky, tonight.';
-  renderConstellation();
-  renderWearables();
-  if(!document.getElementById('lifeExpectancy').value) document.getElementById('lifeExpectancy').value = 80;
-  renderLifeGraph();
-  renderStats();
-}
 </script>
 </body>
 </html>
