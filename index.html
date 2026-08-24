@@ -1286,7 +1286,10 @@
   document.getElementById('authGoogleBtn').addEventListener('click', function(){
     var msg = document.getElementById('authMsg');
     if(!sb){ msg.className='auth-msg err'; msg.textContent='Cloud sync is not configured on this deployment.'; return; }
-    sb.auth.signInWithOAuth({ provider:'google' });
+    sb.auth.signInWithOAuth({
+      provider:'google',
+      options: { redirectTo: window.location.origin + window.location.pathname }
+    });
   });
 
   document.getElementById('authSkipBtn').addEventListener('click', handleSkip);
