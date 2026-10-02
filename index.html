@@ -274,6 +274,30 @@
   .section-head h2{margin:0; font-size:20px; font-weight:600;}
   .section-head p{margin:4px 0 0; color:var(--muted); font-size:13.5px; max-width:60ch;}
 
+
+  /* ---------- live wearable awareness ---------- */
+  .live-monitor{position:relative; margin:0 clamp(20px,5vw,56px) 18px; border:1px solid rgba(52,199,123,.28); border-radius:20px; overflow:hidden; background:linear-gradient(135deg,rgba(52,199,123,.09),rgba(110,111,240,.08) 48%,rgba(8,12,24,.96)); box-shadow:0 18px 48px rgba(0,0,0,.28);}
+  .live-monitor::before{content:'';position:absolute;inset:-40% 55% auto -20%;height:240px;background:radial-gradient(circle,rgba(52,199,123,.20),transparent 66%);pointer-events:none;}
+  .live-monitor-inner{position:relative;z-index:1;padding:18px 18px 16px;}
+  .live-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+  .live-title{display:flex;align-items:center;gap:10px;font-weight:650;}
+  .live-pulse{width:10px;height:10px;border-radius:50%;background:var(--muted-2);box-shadow:0 0 0 0 rgba(52,199,123,.5);}
+  .live-monitor.connected .live-pulse{background:var(--guardian);animation:livePulse 1.8s infinite;}
+  @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(52,199,123,.45)}70%{box-shadow:0 0 0 9px rgba(52,199,123,0)}100%{box-shadow:0 0 0 0 rgba(52,199,123,0)}}
+  .live-status{font-size:12px;color:var(--muted);}
+  .live-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .live-grid{display:grid;grid-template-columns:repeat(5,minmax(110px,1fr));gap:10px;}
+  .live-metric{min-height:88px;padding:13px 14px;border:1px solid rgba(255,255,255,.08);background:rgba(3,7,16,.34);border-radius:14px;transition:transform .25s ease,border-color .25s ease,background .25s ease;}
+  .live-metric.updated{animation:metricFlash .65s ease;}
+  @keyframes metricFlash{0%{transform:scale(1);background:rgba(52,199,123,.18)}100%{transform:scale(1);background:rgba(3,7,16,.34)}}
+  .live-metric .value{font:700 25px 'Space Grotesk',sans-serif;letter-spacing:-.02em;}
+  .live-metric .label{margin-top:3px;font-size:11.5px;color:var(--muted);}
+  .live-footer{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap;font-size:11.5px;color:var(--muted-2);}
+  .awareness{margin-top:12px;padding:11px 13px;border-radius:11px;border:1px solid rgba(244,180,0,.22);background:rgba(244,180,0,.055);font-size:11.5px;line-height:1.5;color:var(--muted);}
+  .awareness strong{color:var(--text);font-weight:600;}
+  @media(max-width:800px){.live-grid{grid-template-columns:repeat(2,minmax(120px,1fr));}.live-monitor{margin-left:16px;margin-right:16px;}}
+  @media(max-width:470px){.live-grid{grid-template-columns:1fr 1fr;}.live-metric .value{font-size:22px;}}
+
   /* ---------- dashboard tabs ---------- */
   .tabbar{
     display:flex; gap:4px; border-bottom:1px solid var(--hairline); margin-bottom:26px;
@@ -614,6 +638,34 @@
     <span class="meta-item mono" id="metaClock">--:--</span>
   </div>
 </div>
+
+
+
+<section class="live-monitor" id="liveMonitor" aria-live="polite">
+  <div class="live-monitor-inner">
+    <div class="live-head">
+      <div>
+        <div class="live-title"><span class="live-pulse" id="livePulse"></span><span>Live health & activity</span></div>
+        <div class="live-status" id="liveStatus">boAt Xtend not connected</div>
+      </div>
+      <div class="live-actions">
+        <button type="button" class="btn ghost" id="liveSyncBtn">Connect Xtend</button>
+      </div>
+    </div>
+    <div class="live-grid">
+      <div class="live-metric" data-live="steps"><div class="value" id="liveSteps">—</div><div class="label">Steps today</div></div>
+      <div class="live-metric" data-live="heart_rate"><div class="value" id="liveHeart">—</div><div class="label">Heart rate · bpm</div></div>
+      <div class="live-metric" data-live="calories"><div class="value" id="liveCalories">—</div><div class="label">Calories · kcal</div></div>
+      <div class="live-metric" data-live="distance_m"><div class="value" id="liveDistance">—</div><div class="label">Distance · m</div></div>
+      <div class="live-metric" data-live="active_minutes"><div class="value" id="liveActive">—</div><div class="label">Active · min</div></div>
+    </div>
+    <div class="live-footer">
+      <span id="liveLastUpdate">Waiting for a wearable reading</span>
+      <span id="livePracticeSync">Walk / Sleep / Workout practice sync is automatic when source data is available</span>
+    </div>
+    <div class="awareness"><strong>Awareness, not alarm.</strong> Wearable readings can be delayed or imperfect and a single number is not a diagnosis. Use the dashboard to notice patterns rather than panic over an isolated reading. If you feel unwell, don't wait for this app to decide what to do; seek appropriate medical care.</div>
+  </div>
+</section>
 
 <section class="hero" id="sky">
   <div class="hero-copy">
@@ -2065,10 +2117,43 @@
   }
   function saveXtendData(){ try { window.localStorage.setItem(XTEND_KEY, JSON.stringify(XTEND)); } catch(e){} }
   function xtendDay(dateStr){ return XTEND[dateStr] || null; }
+
+  function updateLiveMonitor(metrics){
+    var d = Object.assign({}, xtendDay(today()) || {}, metrics || {});
+    var vals = {
+      steps: d.steps,
+      heart_rate: d.heart_rate,
+      calories: d.calories,
+      distance_m: d.distance_m,
+      active_minutes: d.active_minutes
+    };
+    var ids = {steps:'liveSteps',heart_rate:'liveHeart',calories:'liveCalories',distance_m:'liveDistance',active_minutes:'liveActive'};
+    Object.keys(ids).forEach(function(k){
+      var node=document.getElementById(ids[k]); if(!node) return;
+      var next = vals[k]==null ? '—' : String(vals[k]);
+      if(node.textContent!==next){ node.textContent=next; var card=node.closest('.live-metric'); if(card){ card.classList.remove('updated'); void card.offsetWidth; card.classList.add('updated'); }}
+    });
+    var last = d.updated_at ? new Date(d.updated_at) : null;
+    document.getElementById('liveLastUpdate').textContent = last ? ('Last update '+last.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})) : 'Waiting for a wearable reading';
+    var practice=[];
+    if(d.active_minutes!=null) practice.push('Walk '+Math.round(d.active_minutes)+' min');
+    if(d.sleep_hours!=null) practice.push('Sleep '+d.sleep_hours+' h');
+    if(d.workout_minutes!=null) practice.push('Workout '+Math.round(d.workout_minutes)+' min');
+    document.getElementById('livePracticeSync').textContent = practice.length ? practice.join(' · ') : 'Walk / Sleep / Workout practice sync is automatic when source data is available';
+  }
+  function setLiveStatus(text, connected){
+    var wrap=document.getElementById('liveMonitor');
+    var status=document.getElementById('liveStatus');
+    var btn=document.getElementById('liveSyncBtn');
+    if(status) status.textContent=text;
+    if(wrap) wrap.classList.toggle('connected',!!connected);
+    if(btn) btn.textContent=connected ? 'Sync now' : 'Connect Xtend';
+  }
   function num(v){ return (typeof v==='number' && isFinite(v)) ? v : null; }
   function fmtMetric(v, suffix){ return v==null ? '—' : String(v) + (suffix||''); }
   function renderWearableSummary(dateStr, compact){
     var d = xtendDay(dateStr);
+    if(dateStr===today()) updateLiveMonitor(d || {});
     if(!d) return;
     var panel = el('div','wearable-panel');
     panel.innerHTML = '<div class="panel-title"><h3>boAt Xtend</h3><span class="n">'+(d.updated_at ? new Date(d.updated_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'synced')+'</span></div>';
@@ -2135,6 +2220,7 @@
     return out;
   }
   function xtendStatus(text){
+    setLiveStatus(text, /Connected|Synced/i.test(text));
     var cards=document.querySelectorAll('#deviceGrid .device-card');
     cards.forEach(function(c){ if(c.querySelector('.dev-name') && c.querySelector('.dev-name').textContent==='boAt Xtend'){ var s=c.querySelector('.dev-status'); s.textContent=text; s.classList.toggle('connected', /Connected|Synced/i.test(text)); }});
   }
@@ -2149,18 +2235,35 @@
     try{
       xtendStatus('Scanning…');
       xtendDevice = await navigator.bluetooth.requestDevice({filters:[{services:[XTEND_SERVICE]}], optionalServices:[XTEND_SERVICE]});
-      xtendDevice.addEventListener('gattserverdisconnected', function(){xtendStatus('Disconnected');});
+      xtendDevice.addEventListener('gattserverdisconnected', function(){stopXtendLiveMonitoring(); xtendStatus('Disconnected');});
       var server=await xtendDevice.gatt.connect();
       var service=await server.getPrimaryService(XTEND_SERVICE);
       try{ xtendWrite=await service.getCharacteristic(XTEND_WRITE); }catch(e){ xtendWrite=await service.getCharacteristic(XTEND_ALT_WRITE); }
       try{ xtendNotify=await service.getCharacteristic(XTEND_NOTIFY); }catch(e){ xtendNotify=await service.getCharacteristic(XTEND_ALT_NOTIFY); }
       await xtendNotify.startNotifications();
       xtendNotify.addEventListener('characteristicvaluechanged', handleXtendNotification);
-      xtendStatus('Connected · syncing…');
+      xtendStatus('Connected · live monitoring');
+      startXtendLiveMonitoring();
       // Live snapshot request used by the 0x0AF0 family.
       await xtendWrite.writeValue(new Uint8Array([0x02,0xA0]));
     }catch(e){ console.warn('Xtend connection failed',e); xtendStatus('Not connected'); alert('Could not connect to the boAt Xtend: '+(e.message||e)); }
   }
+
+
+  var xtendLiveTimer = null;
+  function requestXtendLive(){
+    if(!xtendWrite || !xtendDevice || !xtendDevice.gatt || !xtendDevice.gatt.connected) return;
+    xtendWrite.writeValue(new Uint8Array([0x02,0xA0])).catch(function(e){ console.warn('Xtend live request failed',e); });
+  }
+  function startXtendLiveMonitoring(){
+    if(xtendLiveTimer) clearInterval(xtendLiveTimer);
+    requestXtendLive();
+    xtendLiveTimer=setInterval(requestXtendLive, 15000);
+  }
+  function stopXtendLiveMonitoring(){ if(xtendLiveTimer){clearInterval(xtendLiveTimer);xtendLiveTimer=null;} }
+  document.getElementById('liveSyncBtn').addEventListener('click', function(){
+    if(xtendDevice && xtendDevice.gatt && xtendDevice.gatt.connected) requestXtendLive(); else connectBoatXtend();
+  });
 
   function renderDeviceGrid(){
     var grid = document.getElementById('deviceGrid');
@@ -2405,6 +2508,7 @@
     renderView();
     renderPerspectiveFromProfile();
     renderDeviceGrid();
+  updateLiveMonitor(xtendDay(today()) || {});
     renderAccountChip();
     if(PROFILE.reminder_time) reminderTimeInput.value = PROFILE.reminder_time;
     refreshReminderStatus();
