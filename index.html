@@ -124,6 +124,23 @@
   }
   nav button.navlink:hover{color:var(--text);}
   nav button.navlink.active{color:var(--guardian); border-color:var(--guardian-soft); background:var(--guardian-soft);}
+  .notification-btn{position:relative;width:38px;height:38px;border-radius:50%;border:1px solid var(--hairline);background:var(--panel);color:var(--text);cursor:pointer;font-size:16px;display:inline-flex;align-items:center;justify-content:center;margin-left:2px;}
+  .notification-btn:hover{border-color:var(--guardian);background:var(--guardian-soft);}
+  .notification-btn i{position:absolute;right:-3px;top:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:var(--ember);color:#080B14;font:700 10px/17px Inter,sans-serif;font-style:normal;text-align:center;display:none;}
+  .notification-btn.has-alert i{display:block;}
+  .wellness-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+  .wellness-card{background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);padding:18px;}
+  .wellness-card h3{margin:0 0 7px;font-size:16px;}
+  .wellness-card p{margin:0;color:var(--muted);font-size:12.5px;}
+  .wellness-form{display:grid;gap:12px;margin-top:14px;}
+  .question-row{display:grid;grid-template-columns:1fr 180px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--hairline);}
+  .question-row:last-child{border-bottom:0;}
+  .question-row label{font-size:13px;color:var(--text);}
+  .question-row select,.question-row input{width:100%;background:var(--void);border:1px solid var(--hairline);border-radius:8px;color:var(--text);padding:8px;font-family:Inter,sans-serif;}
+  .coach-output{margin-top:14px;padding:14px;border-radius:10px;background:var(--nebula-soft);border:1px solid rgba(110,111,240,.35);color:var(--text);font-size:13px;line-height:1.65;}
+  .quality-row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--muted);}
+  .quality-pill{padding:4px 8px;border-radius:999px;background:var(--guardian-soft);color:var(--guardian);}
+  @media(max-width:760px){.wellness-grid{grid-template-columns:1fr;}.question-row{grid-template-columns:1fr;gap:6px;}nav{width:100%;overflow:auto;padding-bottom:2px;}}
 
   .meta-bar{
     display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
@@ -626,7 +643,11 @@
     <button class="navlink" data-scroll="#dashboard">Dashboard</button>
     <button class="navlink" data-scroll="#perspective">Perspective</button>
     <button class="navlink" data-scroll="#reminders">Reminders</button>
+    <button class="navlink" data-scroll="#wellness">Wellness</button>
     <button class="navlink" data-scroll="#devices">Devices</button>
+    <button class="notification-btn" id="notificationBtn" type="button" aria-label="Open Guardian notifications" title="Notifications">
+      <span aria-hidden="true">🔔</span><i id="notificationBadge">0</i>
+    </button>
     <span class="account-chip" id="accountChip"></span>
   </nav>
 </header>
@@ -890,6 +911,49 @@
     </div>
   </div>
   <div class="manage-wrap" id="habitReminderList"></div>
+</section>
+
+<section class="page-section" id="wellness">
+  <div class="section-head">
+    <div>
+      <h2>Wellness check-in</h2>
+      <p>Personal, social, work and emotional context helps Guardian make better, evidence-aware suggestions. These questions are for reflection, not diagnosis.</p>
+    </div>
+    <div class="export-group"><button type="button" class="btn ghost" id="wellnessSaveBtn">Save check-in</button></div>
+  </div>
+  <div class="wellness-grid">
+    <div class="wellness-card">
+      <h3>How are you doing?</h3>
+      <p>Rate each area from 1 (very low) to 5 (very good).</p>
+      <div class="wellness-form">
+        <div class="question-row"><label for="qPersonal">How happy/satisfied are you in your personal life?</label><select id="qPersonal"><option value="1">1 — very low</option><option value="2">2 — low</option><option value="3" selected>3 — okay</option><option value="4">4 — good</option><option value="5">5 — very good</option></select></div>
+        <div class="question-row"><label for="qSocial">How supported and connected do you feel socially?</label><select id="qSocial"><option value="1">1 — very low</option><option value="2">2 — low</option><option value="3" selected>3 — okay</option><option value="4">4 — good</option><option value="5">5 — very good</option></select></div>
+        <div class="question-row"><label for="qWork">How manageable and satisfying does work/study feel?</label><select id="qWork"><option value="1">1 — very difficult</option><option value="2">2 — difficult</option><option value="3" selected>3 — mixed</option><option value="4">4 — manageable</option><option value="5">5 — very good</option></select></div>
+        <div class="question-row"><label for="qEmotional">How emotionally calm and resilient have you felt?</label><select id="qEmotional"><option value="1">1 — very low</option><option value="2">2 — low</option><option value="3" selected>3 — mixed</option><option value="4">4 — good</option><option value="5">5 — very good</option></select></div>
+        <div class="question-row"><label for="qStress">How stressed have you felt recently?</label><select id="qStress"><option value="1">1 — not stressed</option><option value="2">2 — mildly</option><option value="3" selected>3 — moderate</option><option value="4">4 — high</option><option value="5">5 — very high</option></select></div>
+        <div class="question-row"><label for="qSleep">How restorative has your sleep felt?</label><select id="qSleep"><option value="1">1 — very poor</option><option value="2">2 — poor</option><option value="3" selected>3 — mixed</option><option value="4">4 — good</option><option value="5">5 — very good</option></select></div>
+      </div>
+    </div>
+    <div class="wellness-card">
+      <h3>WHO-5 well-being check</h3>
+      <p>Think about the <b>past two weeks</b>. This is the WHO-5 self-report well-being instrument; higher scores indicate better mental well-being. It is not a diagnosis.</p>
+      <div class="wellness-form" id="who5Form">
+        <div class="question-row"><label>I have felt cheerful and in good spirits.</label><select data-who="1"><option value="0">0 — at no time</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 — all of the time</option></select></div>
+        <div class="question-row"><label>I have felt calm and relaxed.</label><select data-who="2"><option value="0">0 — at no time</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 — all of the time</option></select></div>
+        <div class="question-row"><label>I have felt active and vigorous.</label><select data-who="3"><option value="0">0 — at no time</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 — all of the time</option></select></div>
+        <div class="question-row"><label>I woke up feeling fresh and rested.</label><select data-who="4"><option value="0">0 — at no time</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 — all of the time</option></select></div>
+        <div class="question-row"><label>My daily life has been filled with things that interest me.</label><select data-who="5"><option value="0">0 — at no time</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 — all of the time</option></select></div>
+      </div>
+      <div class="quality-row"><span id="who5Score">WHO-5: not scored yet</span><span class="quality-pill">evidence-based</span></div>
+      <div class="coach-output" id="guardianCoach">Save a check-in to get your evidence-aware Guardian plan.</div>
+    </div>
+  </div>
+  <div class="wellness-card" style="margin-top:14px;">
+    <h3>Activity minimums & data quality</h3>
+    <p>Guardian compares your tracked activity with WHO adult physical-activity recommendations. The WHO target is <b>150–300 min/week of moderate aerobic activity</b> (or 75–150 vigorous) plus <b>strength work on 2+ days/week</b>. Wearable “active minutes” are treated as a proxy only unless intensity/type is verified.</p>
+    <div class="quality-row"><span id="whoActivityStatus">Calculating from your tracked data…</span><span id="dataQualityStatus">Data quality: local / unverified</span></div>
+  </div>
+  <p class="perspective-disclaimer">Guardian can identify patterns and suggest healthy actions, but it cannot diagnose mental-health conditions or determine medical risk from a watch reading. If you are in crisis or feel unsafe, seek immediate help from an appropriate professional or emergency service.</p>
 </section>
 
 <section class="page-section" id="devices">
@@ -1350,9 +1414,12 @@
   document.getElementById('authGoogleBtn').addEventListener('click', function(){
     var msg = document.getElementById('authMsg');
     if(!sb){ msg.className='auth-msg err'; msg.textContent='Cloud sync is not configured on this deployment.'; return; }
+    var redirectUrl = window.location.origin + '/app/index.html';
     sb.auth.signInWithOAuth({
       provider:'google',
-      options: { redirectTo: window.location.origin + window.location.pathname }
+      options: { redirectTo: redirectUrl, queryParams:{ access_type:'offline', prompt:'select_account' } }
+    }).then(function(res){
+      if(res.error){ msg.className='auth-msg err'; msg.textContent='Google sign-in could not start: '+res.error.message; }
     });
   });
 
@@ -1431,6 +1498,23 @@
     if(dateEl) dateEl.textContent = now.toLocaleDateString(undefined,{ weekday:'short', month:'short', day:'numeric' });
     if(clockEl) clockEl.textContent = now.toLocaleTimeString(undefined,{ hour:'2-digit', minute:'2-digit' });
   }
+
+  /* Google OAuth callback hardening for GitHub Pages.
+     Always return to the real app route instead of a repo/root route that can 404. */
+  function normalizeOAuthCallback(){
+    try{
+      var params = new URLSearchParams(window.location.search || '');
+      var hash = new URLSearchParams((window.location.hash || '').replace(/^#/,''));
+      if(params.get('error') || hash.get('error')){
+        var msg = params.get('error_description') || hash.get('error_description') || params.get('error') || hash.get('error');
+        var node=document.getElementById('authMsg'); if(node){ node.className='auth-msg err'; node.textContent='Google sign-in returned an error: '+decodeURIComponent(String(msg).replace(/\+/g,' ')); }
+      }
+      if((window.location.pathname==='/' || !/\/app\/index\.html$/.test(window.location.pathname)) && (params.get('code') || hash.get('access_token'))){
+        window.location.replace('/app/index.html'+window.location.search+window.location.hash);
+      }
+    }catch(e){ console.warn('OAuth callback normalization failed',e); }
+  }
+  normalizeOAuthCallback();
 
   function initAuth(){
     if(!sb){
@@ -2184,8 +2268,12 @@
 
   function syncXtendIntoDashboard(metrics){
     var date = today();
-    XTEND[date] = Object.assign({}, XTEND[date] || {}, metrics, {updated_at:new Date().toISOString(), source:'boAt Xtend'});
+    XTEND[date] = Object.assign({}, XTEND[date] || {}, metrics, {updated_at:new Date().toISOString(), source:'boAt Xtend', verified:!!metrics.verified, raw:metrics.raw||((XTEND[date]||{}).raw||null)});
     saveXtendData();
+    if(sb && currentUser){
+      var cloudRow={user_id:currentUser.id,measured_at:XTEND[date].updated_at,source:'boAt Xtend',steps:num(metrics.steps),heart_rate:num(metrics.heart_rate),spo2:num(metrics.spo2),stress:num(metrics.stress),calories:num(metrics.calories),distance_m:num(metrics.distance_m),active_minutes:num(metrics.active_minutes),sleep_hours:num(metrics.sleep_hours),workout_minutes:num(metrics.workout_minutes),verified:!!metrics.verified,raw_packet:metrics.raw||null,quality:metrics.verified?'verified':'unverified',metadata:{packet_type:metrics.packet_type||null}};
+      sb.from('nebula_wearable_readings').insert(cloudRow).then(function(res){if(res.error)console.warn('wearable cloud save failed:',res.error.message);});
+    }
     // Map compatible wearable measurements into the existing practices without
     // pretending that steps are minutes. Sleep is already an hours habit; active
     // minutes feed Walk, and a meaningful active period lights Workout.
@@ -2275,10 +2363,8 @@
       xtendWrite=chars.find(function(c){return c.uuid===XTEND_WRITE;}) || chars.find(function(c){return c.uuid===XTEND_ALT_WRITE;}) || chars.find(function(c){return c.properties.writeWithoutResponse||c.properties.write;});
       xtendNotify=chars.find(function(c){return c.uuid===XTEND_NOTIFY;}) || chars.find(function(c){return c.uuid===XTEND_ALT_NOTIFY;}) || chars.find(function(c){return c.properties.notify;});
       xtendHrNotify=null;
-      bleDiag('Using service '+service.uuid);
-      await dumpXtendGatt(service);
+      if(!xtendWrite || !xtendNotify) throw new Error('Xtend service characteristics were not exposed by the watch');
       clearXtendListeners();
-      if(!xtendNotify) throw new Error('No notify characteristic exposed by the Xtend service');
       await xtendNotify.startNotifications();
       xtendNotify.addEventListener('characteristicvaluechanged', handleXtendNotification);
       // Subscribe to the other notify characteristic when present. It may carry HR or other telemetry.
@@ -2329,85 +2415,28 @@
     }catch(e){ console.info('Known Xtend lookup unavailable',e); }
     return false;
   }
-  function bleDiag(message, bytes){
-    var line = '['+new Date().toLocaleTimeString()+'] '+message+(bytes ? '  ['+bytesToHex(bytes)+']' : '');
-    console.info('[Guardian BLE]', line);
-    var box=document.getElementById('bleDiagLog');
-    if(box){ box.textContent += line+'\n'; box.scrollTop=box.scrollHeight; }
-  }
-
-  function showBleDiagnostics(show){
-    var p=document.getElementById('bleDiagnostics');
-    if(p) p.style.display=show?'block':'none';
-  }
-
-  function characteristicSummary(c){
-    var props=c.properties||{};
-    return c.uuid+' ['+Object.keys(props).filter(function(k){return props[k];}).join(',')+']';
-  }
-
-  async function dumpXtendGatt(service){
-    try{
-      var chars=await service.getCharacteristics();
-      bleDiag('Service '+service.uuid+' has '+chars.length+' characteristic(s)');
-      chars.forEach(function(c){ bleDiag('  '+characteristicSummary(c)); });
-    }catch(e){ bleDiag('Characteristic discovery failed: '+(e.message||e)); }
-  }
-
   async function connectBoatXtend(){
-    showBleDiagnostics(true);
-    if(!navigator.bluetooth){
-      bleDiag('Web Bluetooth API unavailable. Use Chrome/Edge over HTTPS on a supported device.');
-      alert('Web Bluetooth is not available in this browser. Use Chrome or Edge over HTTPS.');
-      return;
-    }
-    if(xtendDevice && xtendDevice.gatt && xtendDevice.gatt.connected){
-      bleDiag('Already connected; requesting latest data.');
-      requestXtendLive();
-      return;
-    }
-
+    if(!navigator.bluetooth){ alert('Web Bluetooth is not available in this browser. Use Chrome or Edge over HTTPS.'); return; }
+    if(xtendDevice && xtendDevice.gatt && xtendDevice.gatt.connected){ requestXtendLive(); return; }
+    if(await connectKnownXtend(false)) return;
     try{
-      setLiveMode('searching');
-      xtendStatus('Scanning for boAt Xtend…');
-      bleDiag('Starting user-approved Bluetooth device chooser.');
-
-      var device=null;
-      // First try previously granted devices.
-      if(navigator.bluetooth.getDevices){
-        try{
-          var known=await navigator.bluetooth.getDevices();
-          bleDiag('Previously granted devices visible to browser: '+known.length);
-          device=known.find(function(d){
-            return d && (((d.name||'').toLowerCase().includes('xtend')) ||
-                         ((d.name||'').toLowerCase().includes('boat')) ||
-                         d.id===localStorage.getItem('guardian-nebula-xtend-device-id'));
-          }) || null;
-        }catch(e){ bleDiag('getDevices() unavailable: '+(e.message||e)); }
-      }
-
-      // IMPORTANT: some watches do not advertise the custom service/name in
-      // scan results, so the old service/name filters could hide the watch.
-      if(!device){
-        bleDiag('No previously granted Xtend found; opening unrestricted chooser.');
-        device=await navigator.bluetooth.requestDevice({
-          acceptAllDevices:true,
-          optionalServices:[XTEND_SERVICE,'heart_rate','pulse_oximeter','battery_service','device_information']
-        });
-      }
-      if(!device){ bleDiag('No device selected.'); return; }
-
-      bleDiag('Selected device: '+(device.name||'(unnamed)')+' / '+device.id);
+      setLiveMode('searching'); xtendStatus('Choose your boAt Xtend once…');
+      var device=await navigator.bluetooth.requestDevice({
+        filters:[
+          {services:[XTEND_SERVICE]},
+          {namePrefix:'boAt'},
+          {namePrefix:'Xtend'}
+        ],
+        optionalServices:[XTEND_SERVICE,'heart_rate','pulse_oximeter']
+      });
+      if(!device) return;
       localStorage.setItem('guardian-nebula-xtend-device-id',device.id);
       await bindXtendDevice(device,false);
     }catch(e){
-      bleDiag('Connection failed: '+(e.name||'Error')+': '+(e.message||e));
-      if(e && e.name==='NotFoundError') xtendStatus('No device selected · ready to retry');
-      else xtendStatus('Connection failed · see BLE diagnostics');
-      setLiveMode('error');
+      if(e && e.name==='NotFoundError'){ xtendStatus('No device selected · ready to retry'); setLiveMode('error'); }
+      else { console.warn(e); xtendStatus('Connection cancelled or unavailable'); setLiveMode('error'); }
     }
   }
-
   function parseXtendA0(data){
     if(data.length < 18 || data[0]!==0x02 || data[1]!==0xA0) return null;
     var dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
@@ -2441,10 +2470,8 @@
   }
   function handleXtendNotification(evt){
     var data=new Uint8Array(evt.target.value.buffer.slice(0));
-    bleDiag('Notification from '+evt.target.uuid,data);
     var parsed=parseXtendA0(data);
-    if(parsed){ syncXtendIntoDashboard(parsed); markPacketReceived(); xtendStatus('Connected · activity packet received'); }
-    else { setConnectionDetail('Bluetooth connected · raw packet received; activity format not decoded yet'); }
+    if(parsed){ syncXtendIntoDashboard(parsed); markPacketReceived(); xtendStatus('Connected · live sync active'); }
     XTEND.last_raw=bytesToHex(data); XTEND.last_raw_at=new Date().toISOString(); saveXtendData();
   }
   function handleXtendHeartNotification(evt){
@@ -2455,23 +2482,9 @@
     saveXtendData();
   }
   async function requestXtendLive(){
-    if(!xtendWrite || !xtendDevice || !xtendDevice.gatt || !xtendDevice.gatt.connected){
-      bleDiag('Cannot request activity: write characteristic unavailable/disconnected.');
-      return false;
-    }
-    try{
-      // 02 01 is documented by the reverse-engineered protocol as a basic
-      // device-info request. We use it as a protocol probe before attempting
-      // activity sync. The previous 02 A0 request is not a verified activity
-      // command for this protocol family.
-      var probe=new Uint8Array([0x02,0x01]);
-      bleDiag('Sending protocol probe 02 01',probe);
-      await safeCharacteristicWrite(xtendWrite,probe);
-      return true;
-    }catch(e){
-      bleDiag('BLE write failed: '+(e.message||e));
-      return false;
-    }
+    if(!xtendWrite || !xtendDevice || !xtendDevice.gatt || !xtendDevice.gatt.connected) return false;
+    try{ await safeCharacteristicWrite(xtendWrite,new Uint8Array([0x02,0xA0])); return true; }
+    catch(e){ console.warn('Xtend live request failed',e); onXtendDisconnected(); return false; }
   }
   function startXtendLiveMonitoring(){
     if(xtendLiveTimer) clearInterval(xtendLiveTimer);
@@ -2479,14 +2492,6 @@
     xtendLiveTimer=setInterval(function(){ requestXtendLive(); },10000);
   }
   function stopXtendLiveMonitoring(){ if(xtendLiveTimer){clearInterval(xtendLiveTimer);xtendLiveTimer=null;} }
-  document.getElementById('bleDiagCopy') && document.getElementById('bleDiagCopy').addEventListener('click',async function(){
-    var box=document.getElementById('bleDiagLog');
-    if(box && navigator.clipboard){ await navigator.clipboard.writeText(box.textContent); }
-  });
-  document.getElementById('bleDiagClear') && document.getElementById('bleDiagClear').addEventListener('click',function(){
-    var box=document.getElementById('bleDiagLog'); if(box) box.textContent='';
-  });
-
   document.getElementById('liveSyncBtn').addEventListener('click',connectBoatXtend);
   document.getElementById('liveMeasureBtn').addEventListener('click',async function(){
     if(!(xtendDevice && xtendDevice.gatt && xtendDevice.gatt.connected)){ return connectBoatXtend(); }
@@ -2651,6 +2656,7 @@
   });
 
   function checkReminderTick(){
+    updateNotificationBadge();
     if(!('Notification' in window) || Notification.permission!=='granted') return;
     var now = new Date();
     var hh = pad(now.getHours()), mm = pad(now.getMinutes());
@@ -2749,6 +2755,69 @@
   document.getElementById('exportJsonBtn').addEventListener('click', exportJSON);
   document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
 
+  /* ---------------- wellness, WHO targets, evidence-aware coach ---------------- */
+  var WELLNESS_KEY='guardian-nebula-wellness-v1';
+  function loadWellness(){ try{return JSON.parse(localStorage.getItem(WELLNESS_KEY)||'{}');}catch(e){return {};}}
+  var WELLNESS=loadWellness();
+  function saveWellness(){ try{localStorage.setItem(WELLNESS_KEY,JSON.stringify(WELLNESS));}catch(e){} }
+  function who5Values(){ return Array.from(document.querySelectorAll('[data-who]')).map(function(x){return Number(x.value)||0;}); }
+  function who5Score(){ return who5Values().reduce(function(a,b){return a+b;},0)*4; }
+  function last7Activity(){
+    var total=0, strengthDays=0, days=0;
+    for(var i=0;i<7;i++){
+      var d=addDays(today(),-i), x=XTEND[d]||{};
+      if(num(x.active_minutes)!=null) total += Math.max(0,Number(x.active_minutes));
+      if((entry(d,'workout').done) || num(x.workout_minutes)>0) strengthDays++;
+      if(x.active_minutes!=null || entry(d,'walk').done || entry(d,'workout').done) days++;
+    }
+    return {minutes:Math.round(total),strengthDays:strengthDays,days:days};
+  }
+  function renderWellness(){
+    var a=last7Activity(), score=WELLNESS.who5==null?null:WELLNESS.who5;
+    var ws=document.getElementById('who5Score'); if(ws) ws.textContent=score==null?'WHO-5: not scored yet':'WHO-5: '+score+'/100';
+    var as=document.getElementById('whoActivityStatus');
+    if(as) as.textContent='7-day tracked activity: '+a.minutes+' min · WHO aerobic minimum: 150 min/week · strength days: '+a.strengthDays+'/2'+(a.minutes>=150?' · aerobic proxy target reached':' · aerobic proxy target pending');
+    var q=document.getElementById('dataQualityStatus');
+    if(q){ var d=XTEND[today()]||{}; q.textContent='Data quality: '+(d.source?'wearable '+(d.raw?'raw packet retained':'structured reading'):'manual/local')+(d.verified?' · verified':' · not clinically verified'); }
+    var coach=document.getElementById('guardianCoach');
+    if(coach){
+      var parts=[];
+      if(a.minutes<150) parts.push('You are below the WHO weekly aerobic minimum based on tracked active minutes. Consider a small, manageable walking session rather than trying to catch up all at once.');
+      if(a.strengthDays<2) parts.push('Strength work is still short of the WHO 2-day weekly recommendation; add one or two manageable strength sessions if appropriate for you.');
+      if(WELLNESS.stress>=4) parts.push('Your self-reported stress is high. Prioritize a short recovery break, sleep routine, movement and social support instead of adding pressure.');
+      if(WELLNESS.personal<=2 || WELLNESS.emotional<=2) parts.push('Your personal/emotional ratings are low. Focus on one supportive action today and consider talking with someone you trust.');
+      if(score!=null && score<50) parts.push('Your WHO-5 score is relatively low. This is a well-being signal, not a diagnosis; if low mood or distress persists, consider speaking with a qualified professional.');
+      if(!parts.length) parts.push('Your tracked activity and check-in currently look broadly balanced. Keep the routine sustainable and adjust based on how you actually feel.');
+      coach.innerHTML='<b>Guardian evidence-aware plan</b><br>'+parts.map(function(x){return '• '+x;}).join('<br>')+'<br><br><span style="color:var(--muted)">Data rule: Guardian never fills missing wearable values with guesses. Recommendations are separated from measurements.</span>';
+    }
+  }
+  function restoreWellness(){
+    if(!WELLNESS || !WELLNESS.answers) return;
+    Object.keys(WELLNESS.answers).forEach(function(id){var n=document.getElementById(id);if(n)n.value=WELLNESS.answers[id];});
+    document.querySelectorAll('[data-who]').forEach(function(n){if(WELLNESS.whoAnswers&&WELLNESS.whoAnswers[n.dataset.who]!=null)n.value=WELLNESS.whoAnswers[n.dataset.who];});
+    renderWellness();
+  }
+  document.getElementById('wellnessSaveBtn').addEventListener('click',function(){
+    WELLNESS.answers={};
+    ['qPersonal','qSocial','qWork','qEmotional','qStress','qSleep'].forEach(function(id){WELLNESS.answers[id]=Number(document.getElementById(id).value);});
+    WELLNESS.personal=WELLNESS.answers.qPersonal; WELLNESS.social=WELLNESS.answers.qSocial; WELLNESS.work=WELLNESS.answers.qWork; WELLNESS.emotional=WELLNESS.answers.qEmotional; WELLNESS.stress=WELLNESS.answers.qStress; WELLNESS.sleep=WELLNESS.answers.qSleep;
+    WELLNESS.whoAnswers={}; document.querySelectorAll('[data-who]').forEach(function(n){WELLNESS.whoAnswers[n.dataset.who]=Number(n.value);});
+    WELLNESS.who5=who5Score(); WELLNESS.updated_at=new Date().toISOString(); saveWellness();
+    if(sb&&currentUser){ sb.from('nebula_wellness_assessments').upsert({user_id:currentUser.id,assessed_at:WELLNESS.updated_at,personal:WELLNESS.personal,social:WELLNESS.social,work:WELLNESS.work,emotional:WELLNESS.emotional,stress:WELLNESS.stress,sleep_quality:WELLNESS.sleep,who5:WELLNESS.who5,answers:WELLNESS.answers,who5_answers:WELLNESS.whoAnswers},{onConflict:'user_id,assessed_at'}).then(function(r){if(r.error)console.warn('wellness cloud save failed',r.error.message);}); }
+    renderWellness();
+    updateNotificationBadge();
+  });
+  function updateNotificationBadge(){
+    var b=document.getElementById('notificationBadge'),btn=document.getElementById('notificationBtn'); if(!b||!btn)return;
+    var t=today(), pending=HABITS.filter(function(h){return !entry(t,h.id).done;}).length;
+    var a=last7Activity(), alerts=0; if(a.minutes<150)alerts++; if(a.strengthDays<2)alerts++; if(WELLNESS.stress>=4)alerts++;
+    var n=Math.min(9,pending>0?Math.min(9,pending):alerts); b.textContent=n; btn.classList.toggle('has-alert',n>0);
+  }
+  document.getElementById('notificationBtn').addEventListener('click',function(){
+    document.getElementById('reminders').scrollIntoView({behavior:'smooth'});
+    setTimeout(function(){ var n=document.getElementById('reminderStatus'); if(n)n.textContent='Guardian has '+(last7Activity().minutes<150?'an activity target':'')+(WELLNESS.stress>=4?' and a stress check-in':'')+' to review. Notifications are reminders, not medical alerts.'; },350);
+  });
+
   /* ---------------- boot ---------------- */
   var booted = false;
   function boot(){
@@ -2766,6 +2835,9 @@
     if(PROFILE.reminder_time) reminderTimeInput.value = PROFILE.reminder_time;
     refreshReminderStatus();
     renderHabitReminders();
+    restoreWellness();
+    renderWellness();
+    updateNotificationBadge();
     updateMetaLocation();
     updateMetaClock();
     setInterval(updateMetaClock, 30000);
