@@ -2275,8 +2275,10 @@
       xtendWrite=chars.find(function(c){return c.uuid===XTEND_WRITE;}) || chars.find(function(c){return c.uuid===XTEND_ALT_WRITE;}) || chars.find(function(c){return c.properties.writeWithoutResponse||c.properties.write;});
       xtendNotify=chars.find(function(c){return c.uuid===XTEND_NOTIFY;}) || chars.find(function(c){return c.uuid===XTEND_ALT_NOTIFY;}) || chars.find(function(c){return c.properties.notify;});
       xtendHrNotify=null;
-      if(!xtendWrite || !xtendNotify) throw new Error('Xtend service characteristics were not exposed by the watch');
+      bleDiag('Using service '+service.uuid);
+      await dumpXtendGatt(service);
       clearXtendListeners();
+      if(!xtendNotify) throw new Error('No notify characteristic exposed by the Xtend service');
       await xtendNotify.startNotifications();
       xtendNotify.addEventListener('characteristicvaluechanged', handleXtendNotification);
       // Subscribe to the other notify characteristic when present. It may carry HR or other telemetry.
@@ -2327,28 +2329,85 @@
     }catch(e){ console.info('Known Xtend lookup unavailable',e); }
     return false;
   }
-  async function connectBoatXtend(){
-    if(!navigator.bluetooth){ alert('Web Bluetooth is not available in this browser. Use Chrome or Edge over HTTPS.'); return; }
-    if(xtendDevice && xtendDevice.gatt && xtendDevice.gatt.connected){ requestXtendLive(); return; }
-    if(await connectKnownXtend(false)) return;
+  function bleDiag(message, bytes){
+    var line = '['+new Date().toLocaleTimeString()+'] '+message+(bytes ? '  ['+bytesToHex(bytes)+']' : '');
+    console.info('[Guardian BLE]', line);
+    var box=document.getElementById('bleDiagLog');
+    if(box){ box.textContent += line+'\n'; box.scrollTop=box.scrollHeight; }
+  }
+
+  function showBleDiagnostics(show){
+    var p=document.getElementById('bleDiagnostics');
+    if(p) p.style.display=show?'block':'none';
+  }
+
+  function characteristicSummary(c){
+    var props=c.properties||{};
+    return c.uuid+' ['+Object.keys(props).filter(function(k){return props[k];}).join(',')+']';
+  }
+
+  async function dumpXtendGatt(service){
     try{
-      setLiveMode('searching'); xtendStatus('Choose your boAt Xtend once…');
-      var device=await navigator.bluetooth.requestDevice({
-        filters:[
-          {services:[XTEND_SERVICE]},
-          {namePrefix:'boAt'},
-          {namePrefix:'Xtend'}
-        ],
-        optionalServices:[XTEND_SERVICE,'heart_rate','pulse_oximeter']
-      });
-      if(!device) return;
+      var chars=await service.getCharacteristics();
+      bleDiag('Service '+service.uuid+' has '+chars.length+' characteristic(s)');
+      chars.forEach(function(c){ bleDiag('  '+characteristicSummary(c)); });
+    }catch(e){ bleDiag('Characteristic discovery failed: '+(e.message||e)); }
+  }
+
+  async function connectBoatXtend(){
+    showBleDiagnostics(true);
+    if(!navigator.bluetooth){
+      bleDiag('Web Bluetooth API unavailable. Use Chrome/Edge over HTTPS on a supported device.');
+      alert('Web Bluetooth is not available in this browser. Use Chrome or Edge over HTTPS.');
+      return;
+    }
+    if(xtendDevice && xtendDevice.gatt && xtendDevice.gatt.connected){
+      bleDiag('Already connected; requesting latest data.');
+      requestXtendLive();
+      return;
+    }
+
+    try{
+      setLiveMode('searching');
+      xtendStatus('Scanning for boAt Xtend…');
+      bleDiag('Starting user-approved Bluetooth device chooser.');
+
+      var device=null;
+      // First try previously granted devices.
+      if(navigator.bluetooth.getDevices){
+        try{
+          var known=await navigator.bluetooth.getDevices();
+          bleDiag('Previously granted devices visible to browser: '+known.length);
+          device=known.find(function(d){
+            return d && (((d.name||'').toLowerCase().includes('xtend')) ||
+                         ((d.name||'').toLowerCase().includes('boat')) ||
+                         d.id===localStorage.getItem('guardian-nebula-xtend-device-id'));
+          }) || null;
+        }catch(e){ bleDiag('getDevices() unavailable: '+(e.message||e)); }
+      }
+
+      // IMPORTANT: some watches do not advertise the custom service/name in
+      // scan results, so the old service/name filters could hide the watch.
+      if(!device){
+        bleDiag('No previously granted Xtend found; opening unrestricted chooser.');
+        device=await navigator.bluetooth.requestDevice({
+          acceptAllDevices:true,
+          optionalServices:[XTEND_SERVICE,'heart_rate','pulse_oximeter','battery_service','device_information']
+        });
+      }
+      if(!device){ bleDiag('No device selected.'); return; }
+
+      bleDiag('Selected device: '+(device.name||'(unnamed)')+' / '+device.id);
       localStorage.setItem('guardian-nebula-xtend-device-id',device.id);
       await bindXtendDevice(device,false);
     }catch(e){
-      if(e && e.name==='NotFoundError'){ xtendStatus('No device selected · ready to retry'); setLiveMode('error'); }
-      else { console.warn(e); xtendStatus('Connection cancelled or unavailable'); setLiveMode('error'); }
+      bleDiag('Connection failed: '+(e.name||'Error')+': '+(e.message||e));
+      if(e && e.name==='NotFoundError') xtendStatus('No device selected · ready to retry');
+      else xtendStatus('Connection failed · see BLE diagnostics');
+      setLiveMode('error');
     }
   }
+
   function parseXtendA0(data){
     if(data.length < 18 || data[0]!==0x02 || data[1]!==0xA0) return null;
     var dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
@@ -2382,8 +2441,10 @@
   }
   function handleXtendNotification(evt){
     var data=new Uint8Array(evt.target.value.buffer.slice(0));
+    bleDiag('Notification from '+evt.target.uuid,data);
     var parsed=parseXtendA0(data);
-    if(parsed){ syncXtendIntoDashboard(parsed); markPacketReceived(); xtendStatus('Connected · live sync active'); }
+    if(parsed){ syncXtendIntoDashboard(parsed); markPacketReceived(); xtendStatus('Connected · activity packet received'); }
+    else { setConnectionDetail('Bluetooth connected · raw packet received; activity format not decoded yet'); }
     XTEND.last_raw=bytesToHex(data); XTEND.last_raw_at=new Date().toISOString(); saveXtendData();
   }
   function handleXtendHeartNotification(evt){
@@ -2394,9 +2455,23 @@
     saveXtendData();
   }
   async function requestXtendLive(){
-    if(!xtendWrite || !xtendDevice || !xtendDevice.gatt || !xtendDevice.gatt.connected) return false;
-    try{ await safeCharacteristicWrite(xtendWrite,new Uint8Array([0x02,0xA0])); return true; }
-    catch(e){ console.warn('Xtend live request failed',e); onXtendDisconnected(); return false; }
+    if(!xtendWrite || !xtendDevice || !xtendDevice.gatt || !xtendDevice.gatt.connected){
+      bleDiag('Cannot request activity: write characteristic unavailable/disconnected.');
+      return false;
+    }
+    try{
+      // 02 01 is documented by the reverse-engineered protocol as a basic
+      // device-info request. We use it as a protocol probe before attempting
+      // activity sync. The previous 02 A0 request is not a verified activity
+      // command for this protocol family.
+      var probe=new Uint8Array([0x02,0x01]);
+      bleDiag('Sending protocol probe 02 01',probe);
+      await safeCharacteristicWrite(xtendWrite,probe);
+      return true;
+    }catch(e){
+      bleDiag('BLE write failed: '+(e.message||e));
+      return false;
+    }
   }
   function startXtendLiveMonitoring(){
     if(xtendLiveTimer) clearInterval(xtendLiveTimer);
@@ -2404,6 +2479,14 @@
     xtendLiveTimer=setInterval(function(){ requestXtendLive(); },10000);
   }
   function stopXtendLiveMonitoring(){ if(xtendLiveTimer){clearInterval(xtendLiveTimer);xtendLiveTimer=null;} }
+  document.getElementById('bleDiagCopy') && document.getElementById('bleDiagCopy').addEventListener('click',async function(){
+    var box=document.getElementById('bleDiagLog');
+    if(box && navigator.clipboard){ await navigator.clipboard.writeText(box.textContent); }
+  });
+  document.getElementById('bleDiagClear') && document.getElementById('bleDiagClear').addEventListener('click',function(){
+    var box=document.getElementById('bleDiagLog'); if(box) box.textContent='';
+  });
+
   document.getElementById('liveSyncBtn').addEventListener('click',connectBoatXtend);
   document.getElementById('liveMeasureBtn').addEventListener('click',async function(){
     if(!(xtendDevice && xtendDevice.gatt && xtendDevice.gatt.connected)){ return connectBoatXtend(); }

@@ -73,3 +73,14 @@ Once installed it opens full-screen with its own icon, and the service worker (`
 - The "Memory" field on the Daily tab is a plain per-day note — no AI, nothing sent anywhere, just your own words, saved and synced like everything else.
 - The "Perspective" panel is off until a birth year is entered, and only ever shows a broad statistical average, never a personalized prediction. The week-by-week grid follows the general "memento mori life calendar" format used by tools like Tim Urban's *Your Life in Weeks* and the open-source Memento-Mori project — this is an original implementation, not a copy of any of their code.
 - Built to sit alongside the Guardian EHS platform under the same "Guardian" name, extended from workplace safety into personal wellbeing.
+
+
+## Guardian Xtend BLE troubleshooting build
+
+The Xtend connection uses Web Bluetooth. Open the deployed page in a Chromium browser over HTTPS, keep the watch charged and nearby, and avoid having boAt Wave simultaneously holding the BLE connection.
+
+This build deliberately uses an unrestricted Bluetooth chooser because some firmware revisions do not advertise the custom service/name in a way that the old filtered chooser could discover.
+
+The BLE diagnostic panel records the GATT service/characteristic layout and raw notification packets. The previous build assumed `02 A0` was an activity request and expected a fixed 18-byte `02 A0` packet. That is not a verified activity protocol for the IDO/VeryFit-style protocol family. The documented family uses service `0AF0`, notify `0AF7`, write `0AF6`, and a separate v3 activity protocol. The diagnostic log is therefore used to identify the exact protocol emitted by this physical watch before adding a final decoder.
+
+For security, this build does not attempt firmware-update commands or destructive/reset operations.
