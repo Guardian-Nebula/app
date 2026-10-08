@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="gnTitle">
+  <title id="gnTitle">Guardian Nebula</title>
+  <defs>
+    <radialGradient id="haze" cx="50%" cy="42%" r="65%">
+      <stop offset="0%" stop-color="#6E6FF0" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#6E6FF0" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="3.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- shield -->
+  <path d="M100 12 L170 34 C170 96 150 152 100 190 C50 152 30 96 30 34 Z"
+        fill="#0B1120" stroke="#22304C" stroke-width="2.5"/>
+  <path d="M100 12 L170 34 C170 96 150 152 100 190 C50 152 30 96 30 34 Z"
+        fill="url(#haze)"/>
+
+  <!-- constellation: anchor stars (sleep/mind) + orbiting habit stars -->
+  <g stroke="#3A4A6B" stroke-width="1.2" fill="none" opacity="0.9">
+    <line x1="100" y1="112" x2="70" y2="70"/>
+    <line x1="100" y1="112" x2="130" y2="70"/>
+    <line x1="100" y1="112" x2="100" y2="150"/>
+    <line x1="100" y1="112" x2="60" y2="120"/>
+    <line x1="100" y1="112" x2="140" y2="120"/>
+    <line x1="70" y1="70" x2="60" y2="120"/>
+    <line x1="130" y1="70" x2="140" y2="120"/>
+  </g>
+
+  <!-- outer habit stars -->
+  <circle cx="70" cy="70" r="4.5" fill="#F0B429"/>
+  <circle cx="130" cy="70" r="4.5" fill="#F0B429"/>
+  <circle cx="60" cy="120" r="4" fill="#8C8DF5"/>
+  <circle cx="140" cy="120" r="4" fill="#8C8DF5"/>
+  <circle cx="100" cy="150" r="4.5" fill="#F0B429"/>
+
+  <!-- anchor star: bright guardian green, center -->
+  <circle cx="100" cy="112" r="8" fill="#34C77B" filter="url(#glow)"/>
+  <circle cx="100" cy="112" r="3" fill="#EAFBF2"/>
+</svg>
